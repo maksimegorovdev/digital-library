@@ -1,0 +1,6 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
+}
