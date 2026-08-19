@@ -23,9 +23,9 @@
 
 ## 4. Monorepo dev tooling
 
-- [ ] 4.1 Write root `Makefile` with `dev`, `backend`, `frontend`, `lint`, `test` targets (`dev` runs both concurrently)
-- [ ] 4.2 Write root `README.md` documenting prerequisites and each `Makefile` target
-- [ ] 4.3 Verify `make dev` starts both services and the frontend home page shows the backend as healthy
+- [x] 4.1 Write root `Makefile` with `dev`, `backend`, `frontend`, `lint`, `test` targets (`dev` runs both concurrently)
+- [x] 4.2 Write root `README.md` documenting prerequisites and each `Makefile` target
+- [x] 4.3 Verify `make dev` starts both services and the frontend home page shows the backend as healthy
 
 ## 5. Finalize
 
