@@ -5,14 +5,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/digital-library/backend/internal/config"
 	"github.com/digital-library/backend/internal/httpapi"
 )
 
 func main() {
-	r := httpapi.NewRouter()
+	cfg := config.Load()
+	r := httpapi.NewRouter(cfg)
 
-	addr := ":8080"
-	log.Printf("backend listening on %s", addr)
+	addr := ":" + cfg.Port
+	log.Printf("backend listening on %s (frontend origin %s)", addr, cfg.FrontendOrigin)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("server exited: %v", err)
 	}
