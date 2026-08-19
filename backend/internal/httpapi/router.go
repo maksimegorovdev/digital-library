@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -21,7 +23,7 @@ func NewRouter(cfg config.Config) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	r.Use(middleware.Logger)
+	r.Use(structuredLogger)
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{cfg.FrontendOrigin},
@@ -33,4 +35,22 @@ func NewRouter(cfg config.Config) *chi.Mux {
 	r.Get("/healthz", HealthzHandler)
 
 	return r
+}
+
+// structuredLogger logs each completed request via slog with structured
+// key-value fields — chi's stock middleware.Logger emits colorized free
+// text, which does not satisfy the spec's "structured logging" requirement.
+func structuredLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(ww, r)
+		slog.Info("http request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.Status(),
+			"duration", time.Since(start),
+			"request_id", middleware.GetReqID(r.Context()),
+		)
+	})
 }
