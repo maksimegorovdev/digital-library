@@ -10,8 +10,8 @@ frontend.
 
 ## Prerequisites
 
-- Go 1.25+ (`go version`)
-- Node.js 20+ and [pnpm](https://pnpm.io/installation)
+- Go 1.26+ (`go version`)
+- Node.js 20.9+ and [pnpm](https://pnpm.io/installation)
 - [golangci-lint](https://golangci-lint.run/welcome/install/) (for `make lint`)
 
 ## Running locally
