@@ -19,7 +19,10 @@ export type HealthStatus =
  */
 export async function fetchHealth(): Promise<HealthStatus> {
   try {
-    const res = await fetch(`${getApiBaseUrl()}/healthz`, { cache: "no-store" });
+    const res = await fetch(`${getApiBaseUrl()}/healthz`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
     if (!res.ok) {
       return { ok: false, error: `backend responded with ${res.status}` };
     }
