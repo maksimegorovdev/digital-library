@@ -29,5 +29,5 @@
 
 ## 5. Finalize
 
-- [ ] 5.1 Review `git status` to confirm generated artifacts (`node_modules`, `.next`, `.env*`, backend binary) are ignored
-- [ ] 5.2 Stage the full scaffold and create the initial commit
+- [x] 5.1 Review `git status` to confirm generated artifacts (`node_modules`, `.next`, `.env*`, backend binary) are ignored
+- [x] 5.2 Stage the full scaffold and create the initial commit
