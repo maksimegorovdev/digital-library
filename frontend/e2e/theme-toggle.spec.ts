@@ -29,3 +29,33 @@ test.describe("theme toggle", () => {
     await expect(page.locator("html")).not.toHaveClass(/dark/)
   })
 })
+
+test.describe("theme toggle - system preference (dark)", () => {
+  test.use({ colorScheme: "dark" })
+
+  test("applies dark theme when 'System' is selected under a dark OS preference", async ({
+    page,
+  }) => {
+    await page.goto("/")
+
+    await page.getByRole("button", { name: "Toggle theme" }).click()
+    await page.getByRole("menuitem", { name: "System" }).click()
+
+    await expect(page.locator("html")).toHaveClass(/dark/)
+  })
+})
+
+test.describe("theme toggle - system preference (light)", () => {
+  test.use({ colorScheme: "light" })
+
+  test("applies light theme when 'System' is selected under a light OS preference", async ({
+    page,
+  }) => {
+    await page.goto("/")
+
+    await page.getByRole("button", { name: "Toggle theme" }).click()
+    await page.getByRole("menuitem", { name: "System" }).click()
+
+    await expect(page.locator("html")).not.toHaveClass(/dark/)
+  })
+})
