@@ -30,8 +30,8 @@
 
 - [x] 5.1 Add `@playwright/test` as a dev dependency and scaffold `frontend/playwright.config.ts`
 - [x] 5.2 Add a `pnpm test:e2e` script in `frontend/package.json`
-- [ ] 5.3 Write `frontend/e2e/theme-toggle.spec.ts`: toggling the theme updates the page's rendered state (e.g. `dark` class on `<html>`)
-- [ ] 5.4 Extend the e2e test to reload the page after toggling and assert the selected theme persists
+- [x] 5.3 Write `frontend/e2e/theme-toggle.spec.ts`: toggling the theme updates the page's rendered state (e.g. `dark` class on `<html>`)
+- [x] 5.4 Extend the e2e test to reload the page after toggling and assert the selected theme persists
 
 ## 6. Verify
 
