@@ -35,6 +35,6 @@
 
 ## 6. Verify
 
-- [ ] 6.1 Run `pnpm test` and `pnpm test:e2e` in `frontend/` and confirm all tests pass
-- [ ] 6.2 Run `pnpm build` in `frontend/` to confirm the app still builds cleanly
-- [ ] 6.3 Manually drive the app (dev server, browser or Playwright MCP) to confirm Light/Dark/System all render correctly with Lyra tokens and the choice persists across a reload
+- [x] 6.1 Run `pnpm test` and `pnpm test:e2e` in `frontend/` and confirm all tests pass
+- [x] 6.2 Run `pnpm build` in `frontend/` to confirm the app still builds cleanly
+- [x] 6.3 Manually drive the app (dev server, browser or Playwright MCP) to confirm Light/Dark/System all render correctly with Lyra tokens and the choice persists across a reload
