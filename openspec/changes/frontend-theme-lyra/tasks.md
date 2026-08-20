@@ -14,7 +14,7 @@
 ## 3. Add header and theme toggle UI
 
 - [x] 3.1 Add the `dropdown-menu` shadcn component (`npx shadcn@latest add dropdown-menu`) and verify it uses the project's Base UI (`render` prop) primitives
-- [ ] 3.2 Create `frontend/src/components/theme-toggle.tsx`: client component using `useTheme()` from `next-themes`, icon trigger button, `DropdownMenu` with Light/Dark/System items
+- [x] 3.2 Create `frontend/src/components/theme-toggle.tsx`: client component using `useTheme()` from `next-themes`, icon trigger button, `DropdownMenu` with Light/Dark/System items
 - [ ] 3.3 Create `frontend/src/components/header.tsx`: project title on the left, `ThemeToggle` on the right
 - [ ] 3.4 Render `Header` above `{children}` in `frontend/src/app/layout.tsx`
 
@@ -22,9 +22,9 @@
 
 - [x] 4.1 Add dev dependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` (or the project's preferred DOM environment)
 - [x] 4.2 Add `frontend/vitest.config.ts` (jsdom environment, path aliases matching `tsconfig.json`) and a `pnpm test` script in `frontend/package.json`
-- [ ] 4.3 Write `frontend/src/components/theme-toggle.test.tsx`: selecting a theme option updates the rendered theme state
+- [x] 4.3 Write `frontend/src/components/theme-toggle.test.tsx`: selecting a theme option updates the rendered theme state
 - [ ] 4.4 Write `frontend/src/components/header.test.tsx`: header renders the project title and the theme toggle
-- [ ] 4.5 Write a test that `ThemeProvider` renders its children without error
+- [x] 4.5 Write a test that `ThemeProvider` renders its children without error
 
 ## 5. Set up end-to-end testing (Playwright)
 
