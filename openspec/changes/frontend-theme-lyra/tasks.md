@@ -20,8 +20,8 @@
 
 ## 4. Set up component unit testing (Vitest + React Testing Library)
 
-- [ ] 4.1 Add dev dependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` (or the project's preferred DOM environment)
-- [ ] 4.2 Add `frontend/vitest.config.ts` (jsdom environment, path aliases matching `tsconfig.json`) and a `pnpm test` script in `frontend/package.json`
+- [x] 4.1 Add dev dependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` (or the project's preferred DOM environment)
+- [x] 4.2 Add `frontend/vitest.config.ts` (jsdom environment, path aliases matching `tsconfig.json`) and a `pnpm test` script in `frontend/package.json`
 - [ ] 4.3 Write `frontend/src/components/theme-toggle.test.tsx`: selecting a theme option updates the rendered theme state
 - [ ] 4.4 Write `frontend/src/components/header.test.tsx`: header renders the project title and the theme toggle
 - [ ] 4.5 Write a test that `ThemeProvider` renders its children without error
