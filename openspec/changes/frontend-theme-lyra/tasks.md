@@ -13,7 +13,7 @@
 
 ## 3. Add header and theme toggle UI
 
-- [ ] 3.1 Add the `dropdown-menu` shadcn component (`npx shadcn@latest add dropdown-menu`) and verify it uses the project's Base UI (`render` prop) primitives
+- [x] 3.1 Add the `dropdown-menu` shadcn component (`npx shadcn@latest add dropdown-menu`) and verify it uses the project's Base UI (`render` prop) primitives
 - [ ] 3.2 Create `frontend/src/components/theme-toggle.tsx`: client component using `useTheme()` from `next-themes`, icon trigger button, `DropdownMenu` with Light/Dark/System items
 - [ ] 3.3 Create `frontend/src/components/header.tsx`: project title on the left, `ThemeToggle` on the right
 - [ ] 3.4 Render `Header` above `{children}` in `frontend/src/app/layout.tsx`
