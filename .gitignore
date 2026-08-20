@@ -19,3 +19,6 @@
 
 # SDD workspace
 .superpowers/
+
+# Playwright MCP
+.playwright-mcp/
