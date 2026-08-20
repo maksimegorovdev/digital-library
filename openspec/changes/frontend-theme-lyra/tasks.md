@@ -7,8 +7,8 @@
 
 ## 2. Add theme provider and dark-mode plumbing
 
-- [ ] 2.1 Add the `next-themes` dependency (`pnpm add next-themes` in `frontend/`)
-- [ ] 2.2 Create `frontend/src/components/theme-provider.tsx`: client component wrapping `next-themes`' `ThemeProvider` with `attribute="class"`, `defaultTheme="system"`, `enableSystem`
+- [x] 2.1 Add the `next-themes` dependency (`pnpm add next-themes` in `frontend/`)
+- [x] 2.2 Create `frontend/src/components/theme-provider.tsx`: client component wrapping `next-themes`' `ThemeProvider` with `attribute="class"`, `defaultTheme="system"`, `enableSystem`
 - [ ] 2.3 Update `frontend/src/app/layout.tsx`: add `suppressHydrationWarning` to `<html>`, wrap `{children}` with `ThemeProvider`
 
 ## 3. Add header and theme toggle UI
