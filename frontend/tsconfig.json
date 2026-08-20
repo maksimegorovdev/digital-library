@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["vitest/jsdom"]
   },
   "include": [
     "next-env.d.ts",

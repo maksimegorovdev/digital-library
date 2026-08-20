@@ -1,5 +1,6 @@
 .idea
 .DS_Store
+.worktrees
 
 # Backend (Go)
 /backend/server
@@ -15,3 +16,6 @@
 # Environment
 .env*
 !.env.local.example
+
+# SDD workspace
+.superpowers/
