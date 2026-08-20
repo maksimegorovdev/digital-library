@@ -1,9 +1,9 @@
 ## 1. Apply the Lyra shadcn style preset
 
-- [ ] 1.1 Resolve the current preset state with `npx shadcn@latest preset resolve` and confirm the target preset name/code for `base-lyra`
-- [ ] 1.2 Apply the `lyra` preset with a full overwrite (`npx shadcn@latest apply <lyra-preset> --only theme,font` for tokens/fonts, or `init --preset base-lyra --force --no-reinstall` per the shadcn skill's overwrite flow), then re-add `button` and `card` so they pick up the new style
-- [ ] 1.3 Verify `components.json` reports `style: "lyra"` and `globals.css` contains Lyra's light (`:root`) and dark (`.dark`) token values
-- [ ] 1.4 Visually spot-check the existing home page in both light and dark (temporarily toggle the `dark` class by hand) to confirm Lyra tokens render correctly
+- [x] 1.1 Resolve the current preset state with `npx shadcn@latest preset resolve` and confirm the target preset name/code for `base-lyra`
+- [x] 1.2 Apply the `lyra` preset with a full overwrite (`npx shadcn@latest apply <lyra-preset> --only theme,font` for tokens/fonts, or `init --preset base-lyra --force --no-reinstall` per the shadcn skill's overwrite flow), then re-add `button` and `card` so they pick up the new style
+- [x] 1.3 Verify `components.json` reports `style: "lyra"` and `globals.css` contains Lyra's light (`:root`) and dark (`.dark`) token values
+- [x] 1.4 Visually spot-check the existing home page in both light and dark (temporarily toggle the `dark` class by hand) to confirm Lyra tokens render correctly
 
 ## 2. Add theme provider and dark-mode plumbing
 
