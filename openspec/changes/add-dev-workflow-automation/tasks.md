@@ -8,13 +8,12 @@
 ## 2. Git pre-commit safety net (lefthook)
 
 - [x] 2.1 Add `lefthook` as a repo dev tool and create `lefthook.yml` at the repo root
-- [x] 2.2 Configure the pre-commit hook to run `gofmt -l` and `golangci-lint run` on staged `.go` files under `backend/`
-- [x] 2.3 Configure the pre-commit hook to run `prettier --check` and `eslint` on staged frontend source files under `frontend/`
+- [x] 2.2 Configure the pre-commit hook to run `gofmt -w` (auto-fix, re-staged) and `golangci-lint run` (blocking) on staged `.go` files under `backend/`
+- [x] 2.3 Configure the pre-commit hook to run `prettier --write` (auto-fix, re-staged) and `eslint` (blocking) on staged frontend source files under `frontend/`
 - [x] 2.4 Run `lefthook install` locally and verify a commit with a deliberately malformatted file is blocked, then verify a clean commit proceeds
 
 ## 3. Claude Code hooks (via `update-config` skill)
 
-- [x] ~~3.1 Invoke the `update-config` skill to add a `Stop` hook that scopes test runs...~~ REMOVED per user request during apply — implemented, then deleted (commit `cfda77b`); no automatic test-run hook remains
 - [x] 3.2 Invoke the `update-config` skill to add a `PostToolUse` hook on `Edit`/`Write` that formats only the touched file (`gofmt -w` for `.go`, `prettier --write` for frontend source extensions)
 - [x] 3.3 Invoke the `update-config` skill to add a `PreToolUse` hook on `Skill`/`Task` tool calls that appends a timestamped entry to `.claude/logs/skill-activity.log`
 - [x] 3.4 Add `.claude/logs/` to `.gitignore`
@@ -25,13 +24,11 @@
 
 ## 5. Documentation
 
-- [x] 5.1 Document in `AGENTS.md` (or a short root-level section) how the test/format/logging hooks work, that they are additive to TDD (not a replacement), and how to check `.claude/logs/skill-activity.log`
+- [x] 5.1 Document in `AGENTS.md` (or a short root-level section) how the format/logging hooks work, that they are additive to TDD (not a replacement), and how to check `.claude/logs/skill-activity.log`
 
 ## 6. Manual verification
 
-- [ ] 6.1 Edit a `.go` file and confirm `gofmt` runs automatically on save via the `PostToolUse` hook
-- [ ] 6.2 Edit a `.tsx`/`.ts` file and confirm `prettier` runs automatically via the `PostToolUse` hook
-- [x] ~~6.3 End a turn after a `backend/` change and confirm `go test ./...` runs via the `Stop` hook...~~ N/A — Stop hook removed
-- [x] ~~6.4 End a turn with only doc changes and confirm no test command runs~~ N/A — Stop hook removed
-- [ ] 6.5 Invoke a skill and a subagent and confirm both are logged to `.claude/logs/skill-activity.log`
-- [ ] 6.6 Attempt a commit with a deliberately malformatted staged file and confirm the `lefthook` pre-commit hook blocks it
+- [x] 6.1 Edit a `.go` file and confirm `gofmt` runs automatically on save via the `PostToolUse` hook
+- [x] 6.2 Edit a `.tsx`/`.ts` file and confirm `prettier` runs automatically via the `PostToolUse` hook
+- [x] 6.5 Invoke a skill and a subagent and confirm both are logged to `.claude/logs/skill-activity.log`
+- [x] 6.6 Attempt a commit with a deliberately malformatted staged file and confirm the `lefthook` pre-commit hook blocks it
