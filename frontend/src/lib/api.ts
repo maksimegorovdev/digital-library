@@ -34,3 +34,44 @@ export async function fetchHealth(): Promise<HealthStatus> {
     };
   }
 }
+
+export const BOOKS_PAGE_SIZE = 50;
+
+export type Book = {
+  id: number;
+  title: string;
+  author: string;
+  year: number | null;
+  genre: string | null;
+  coverUrl: string | null;
+};
+
+export type BooksResult =
+  { ok: true; books: Book[]; total: number } | { ok: false; error: string };
+
+/**
+ * Fetches a page of books from the backend's /books endpoint and
+ * normalizes both network failures and non-200 responses into a
+ * BooksResult the UI can render without throwing.
+ */
+export async function fetchBooks(
+  offset = 0,
+  limit = BOOKS_PAGE_SIZE,
+): Promise<BooksResult> {
+  try {
+    const res = await fetch(
+      `${getApiBaseUrl()}/books?limit=${limit}&offset=${offset}`,
+      { cache: 'no-store', signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) {
+      return { ok: false, error: `backend responded with ${res.status}` };
+    }
+    const body = (await res.json()) as { books: Book[]; total: number };
+    return { ok: true, books: body.books, total: body.total };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'unknown error',
+    };
+  }
+}
