@@ -6,7 +6,7 @@
 
 **Architecture:** Two independent automation layers — Claude Code hooks (`.claude/settings.json`, fast and file/turn-scoped, added via the `update-config` skill) for in-session feedback, and a `lefthook` git pre-commit hook (tool-independent, repo-wide on staged files) as a safety net — plus two documentation-only edits (`frontend/AGENTS.md`, root `AGENTS.md`).
 
-**Tech Stack:** Go (`gofmt`, `golangci-lint`), Next.js/pnpm (`prettier`, `prettier-plugin-tailwindcss`, `eslint`, `vitest`), `lefthook`, Claude Code hooks (`Stop`, `PostToolUse`, `PreToolUse`).
+**Tech Stack:** Go (`gofmt`, `golangci-lint`), Next.js/pnpm (`prettier`, `prettier-plugin-tailwindcss`, `eslint`, `vitest`), `lefthook`, Claude Code hooks (`PostToolUse`, `PreToolUse`).
 
 **Spec:** `openspec/changes/add-dev-workflow-automation/design.md`, `openspec/changes/add-dev-workflow-automation/specs/dev-workflow-automation/spec.md`, `openspec/changes/add-dev-workflow-automation/specs/monorepo-tooling/spec.md`
 
@@ -156,8 +156,8 @@ Expected: commit succeeds (lefthook.yml itself passes all hooks since it's not a
 - Modify: `.gitignore` (repo root) — add `.claude/logs/`
 
 **Interfaces:**
-- Consumes: `pnpm test` / `go test ./...` (existing Makefile-equivalent commands), `gofmt -w` / `pnpm exec prettier --write` from Task 1.
-- Produces: three hooks other tasks' manual verification (Task 6) exercises; `.claude/logs/skill-activity.log` consumed by Task 5's documentation.
+- Consumes: `gofmt -w` / `pnpm exec prettier --write` from Task 1.
+- Produces: two hooks other tasks' manual verification (Task 6) exercises; `.claude/logs/skill-activity.log` consumed by Task 5's documentation.
 
 - [ ] **Step 1: Add `.claude/logs/` to `.gitignore`**
 
@@ -166,20 +166,9 @@ In `.gitignore` (repo root), under a new `# Claude Code local state` section, ad
 .claude/logs/
 ```
 
-- [ ] **Step 2: Invoke `update-config` to add the Stop hook (scoped test run)**
+> **Removed:** the `Stop` hook (scoped test run on turn end) was implemented and then removed per explicit user request during apply — live in-session testing showed Claude Code hook config added mid-session is not picked up by the current session, and the user decided against keeping a Stop-time test gate at all rather than deferring verification to a fresh session. `PostToolUse` (format) and `PreToolUse` (activity log) remain.
 
-Invoke the `update-config` skill with this exact hook to add under the `Stop` event in `.claude/settings.json`:
-- Event: `Stop`
-- Command (bash):
-```bash
-changed=$(git diff HEAD --name-only); status=0; \
-if echo "$changed" | grep -q '^backend/'; then (cd backend && go test ./...) || status=1; fi; \
-if echo "$changed" | grep -q '^frontend/'; then (cd frontend && pnpm test) || status=1; fi; \
-exit $status
-```
-- Behavior: on non-zero exit, the hook's stderr/output SHALL be surfaced back to Claude as the reason the turn cannot end yet (standard Claude Code Stop-hook blocking behavior), per `dev-workflow-automation` spec's "Scoped test verification before turn completion" requirement.
-
-- [ ] **Step 3: Invoke `update-config` to add the PostToolUse hook (scoped format)**
+- [ ] **Step 2: Invoke `update-config` to add the PostToolUse hook (scoped format)**
 
 Invoke the `update-config` skill with this exact hook to add under the `PostToolUse` event, matcher `Edit|Write`, in `.claude/settings.json`:
 - Event: `PostToolUse`, matcher: `Edit|Write`
@@ -192,7 +181,7 @@ case "$file" in \
 esac
 ```
 
-- [ ] **Step 4: Invoke `update-config` to add the PreToolUse hook (skill/MCP activity log)**
+- [ ] **Step 3: Invoke `update-config` to add the PreToolUse hook (skill/MCP activity log)**
 
 Invoke the `update-config` skill with this exact hook to add under the `PreToolUse` event, matcher `Skill|Task`, in `.claude/settings.json`:
 - Event: `PreToolUse`, matcher: `Skill|Task`
@@ -211,15 +200,15 @@ with open('.claude/logs/skill-activity.log', 'a') as f:
 "
 ```
 
-- [ ] **Step 5: Read back `.claude/settings.json` and confirm all three hooks are present and valid JSON**
+- [ ] **Step 4: Read back `.claude/settings.json` and confirm both hooks are present and valid JSON**
 
 Run:
 ```bash
 python3 -m json.tool .claude/settings.json > /dev/null && echo "valid json"
 ```
-Expected: prints `valid json`; manually inspect the file to confirm `hooks.Stop`, `hooks.PostToolUse`, `hooks.PreToolUse` entries exist with the commands above.
+Expected: prints `valid json`; manually inspect the file to confirm `hooks.PostToolUse`, `hooks.PreToolUse` entries exist with the commands above (no `hooks.Stop`).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add .claude/settings.json .gitignore
@@ -276,9 +265,9 @@ Append to `AGENTS.md`:
 
 ## Dev workflow automation
 
-- Tests run automatically via a `Stop` hook, scoped to changed areas (`backend/` → `go test ./...`, `frontend/` → `pnpm test`, no e2e). This is additive to TDD (`superpowers:test-driven-development`) — it verifies before a turn ends, it does not replace writing tests first.
 - Formatting runs automatically per-file via a `PostToolUse` hook (`gofmt`, `prettier`) and is re-checked repo-wide by a `lefthook` pre-commit hook alongside `golangci-lint`/`eslint`.
 - To check which skills/subagents fired during a session: `tail -f .claude/logs/skill-activity.log`.
+- There is no automatic test-run hook — run `go test ./...` / `pnpm test` manually per `superpowers:test-driven-development`'s RED-GREEN-REFACTOR discipline.
 ```
 
 - [ ] **Step 2: Commit**
@@ -310,15 +299,7 @@ Expected: the diff shows the file already `gofmt`-clean (the hook ran automatica
 
 Repeat Step 1 for a `.tsx` file under `frontend/src/`, confirming `prettier --write` ran automatically, matching the "Editing a frontend source file triggers prettier" scenario.
 
-- [ ] **Step 3: Verify Stop hook runs scoped tests**
-
-Make a small change under `backend/` only, end the turn, and confirm `go test ./...` output appears; then make a change under `frontend/` only and confirm `pnpm test` output appears (and `pnpm test:e2e` does NOT run in either case).
-
-- [ ] **Step 4: Verify Stop hook is a no-op for non-code changes**
-
-Edit only `README.md`, end the turn, and confirm no test command runs, matching the "No code changes skip the test run" scenario.
-
-- [ ] **Step 5: Verify skill/MCP logging**
+- [ ] **Step 3: Verify skill/MCP logging**
 
 Invoke any skill (e.g. `git-commit`) and any subagent (`Agent` tool with `subagent_type: "Explore"`), then run:
 ```bash
@@ -326,18 +307,18 @@ tail -5 .claude/logs/skill-activity.log
 ```
 Expected: two new lines, one per invocation, each with a timestamp and name.
 
-- [ ] **Step 6: Verify the log is gitignored**
+- [ ] **Step 4: Verify the log is gitignored**
 
 ```bash
 git status --porcelain .claude/logs/
 ```
 Expected: no output (nothing untracked/staged under `.claude/logs/`).
 
-- [ ] **Step 7: Verify lefthook blocks a bad commit (re-confirm end-to-end)**
+- [ ] **Step 5: Verify lefthook blocks a bad commit (re-confirm end-to-end)**
 
 Repeat Task 2 Step 4's malformatted-file check once more now that all other hooks are in place, confirming the commit is still blocked.
 
-- [ ] **Step 8: Final commit if any verification step required fixes**
+- [ ] **Step 6: Final commit if any verification step required fixes**
 
 ```bash
 git add -A

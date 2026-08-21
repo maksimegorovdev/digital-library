@@ -14,7 +14,7 @@
 
 ## 3. Claude Code hooks (via `update-config` skill)
 
-- [x] 3.1 Invoke the `update-config` skill to add a `Stop` hook that scopes test runs by `git diff HEAD --name-only` (`go test ./...` for `backend/`, `pnpm test` for `frontend/`, excluding `pnpm test:e2e`), running nothing when no code paths changed
+- [x] ~~3.1 Invoke the `update-config` skill to add a `Stop` hook that scopes test runs...~~ REMOVED per user request during apply — implemented, then deleted (commit `cfda77b`); no automatic test-run hook remains
 - [x] 3.2 Invoke the `update-config` skill to add a `PostToolUse` hook on `Edit`/`Write` that formats only the touched file (`gofmt -w` for `.go`, `prettier --write` for frontend source extensions)
 - [x] 3.3 Invoke the `update-config` skill to add a `PreToolUse` hook on `Skill`/`Task` tool calls that appends a timestamped entry to `.claude/logs/skill-activity.log`
 - [x] 3.4 Add `.claude/logs/` to `.gitignore`
@@ -31,7 +31,7 @@
 
 - [ ] 6.1 Edit a `.go` file and confirm `gofmt` runs automatically on save via the `PostToolUse` hook
 - [ ] 6.2 Edit a `.tsx`/`.ts` file and confirm `prettier` runs automatically via the `PostToolUse` hook
-- [ ] 6.3 End a turn after a `backend/` change and confirm `go test ./...` runs via the `Stop` hook; repeat for a `frontend/` change and `pnpm test`
-- [ ] 6.4 End a turn with only doc changes and confirm no test command runs
+- [x] ~~6.3 End a turn after a `backend/` change and confirm `go test ./...` runs via the `Stop` hook...~~ N/A — Stop hook removed
+- [x] ~~6.4 End a turn with only doc changes and confirm no test command runs~~ N/A — Stop hook removed
 - [ ] 6.5 Invoke a skill and a subagent and confirm both are logged to `.claude/logs/skill-activity.log`
 - [ ] 6.6 Attempt a commit with a deliberately malformatted staged file and confirm the `lefthook` pre-commit hook blocks it
