@@ -1,4 +1,4 @@
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   return (
@@ -6,5 +6,5 @@ export function Header() {
       <span className="text-sm font-medium">digital-library</span>
       <ThemeToggle />
     </header>
-  )
+  );
 }

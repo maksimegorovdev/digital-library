@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
+const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 
 /**
  * Returns the backend's base URL from NEXT_PUBLIC_API_URL, falling back
@@ -9,8 +9,7 @@ export function getApiBaseUrl(): string {
 }
 
 export type HealthStatus =
-  | { ok: true; status: string }
-  | { ok: false; error: string };
+  { ok: true; status: string } | { ok: false; error: string };
 
 /**
  * Fetches the backend's /healthz endpoint and normalizes both network
@@ -20,7 +19,7 @@ export type HealthStatus =
 export async function fetchHealth(): Promise<HealthStatus> {
   try {
     const res = await fetch(`${getApiBaseUrl()}/healthz`, {
-      cache: "no-store",
+      cache: 'no-store',
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) {
@@ -29,6 +28,9 @@ export async function fetchHealth(): Promise<HealthStatus> {
     const body = (await res.json()) as { status: string };
     return { ok: true, status: body.status };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "unknown error" };
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'unknown error',
+    };
   }
 }
