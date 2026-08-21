@@ -1,4 +1,4 @@
-.PHONY: dev backend frontend lint test test-e2e
+.PHONY: dev backend frontend lint test test-e2e migrate-up migrate-down
 
 backend:
 	cd backend && go run ./cmd/server
@@ -22,3 +22,9 @@ test:
 
 test-e2e:
 	cd frontend && pnpm test:e2e
+
+migrate-up:
+	migrate -database "$$DATABASE_URL" -path backend/migrations up
+
+migrate-down:
+	migrate -database "$$DATABASE_URL" -path backend/migrations down 1
