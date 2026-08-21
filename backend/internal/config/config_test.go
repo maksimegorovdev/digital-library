@@ -46,3 +46,34 @@ func TestLoad(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadDatabaseURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		databaseEnv string
+		expected    string
+	}{
+		{
+			name:        "default when unset",
+			databaseEnv: "",
+			expected:    "postgres://postgres:postgres@localhost:5432/digital_library?sslmode=disable",
+		},
+		{
+			name:        "explicit value",
+			databaseEnv: "postgres://user:pass@db:5432/mydb",
+			expected:    "postgres://user:pass@db:5432/mydb",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", tt.databaseEnv)
+
+			cfg := config.Load()
+
+			if cfg.DatabaseURL != tt.expected {
+				t.Errorf("DatabaseURL = %q, want %q", cfg.DatabaseURL, tt.expected)
+			}
+		})
+	}
+}
