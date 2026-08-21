@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchHealth } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { fetchHealth } from '@/lib/api';
 
 export default async function Home() {
   const health = await fetchHealth();
@@ -17,7 +17,8 @@ export default async function Home() {
             </p>
           ) : (
             <p className="text-sm text-red-600">
-              Backend unreachable: <span className="font-mono">{health.error}</span>
+              Backend unreachable:{' '}
+              <span className="font-mono">{health.error}</span>
             </p>
           )}
         </CardContent>

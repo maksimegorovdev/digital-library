@@ -1,6 +1,39 @@
 {
   "enableAllProjectMcpServers": true,
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
+    "superpowers@claude-plugins-official": true,
+    "caveman@caveman": true
+  },
+  "extraKnownMarketplaces": {
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(python3 -c \"import json,sys; print(json.load(sys.stdin)['tool_input']['file_path'])\"); \\\ncase \"$file\" in \\\n  *.go) gofmt -w \"$file\" ;; \\\n  *.ts|*.tsx|*.js|*.jsx|*.css|*.json) (cd frontend && pnpm exec prettier --write \"$file\") ;; \\\nesac"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Skill|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .claude/logs && \\\npython3 -c \"\nimport json, sys, datetime\ndata = json.load(sys.stdin)\nname = data.get('tool_name', 'unknown')\ninp = data.get('tool_input', {})\nkey = inp.get('skill') or inp.get('subagent_type') or inp.get('description') or ''\nline = f\\\"{datetime.datetime.now().isoformat()} {name} {key}\\\"\nwith open('.claude/logs/skill-activity.log', 'a') as f:\n    f.write(line + '\\n')\n\""
+          }
+        ]
+      }
+    ]
   }
 }
