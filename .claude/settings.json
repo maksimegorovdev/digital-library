@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "file=$(python3 -c \"import json,sys; print(json.load(sys.stdin)['tool_input']['file_path'])\"); \\\ncase \"$file\" in \\\n  *.go) gofmt -w \"$file\" ;; \\\n  *.ts|*.tsx|*.js|*.jsx|*.css|*.json) (cd frontend && pnpm exec prettier --write \"../$file\") ;; \\\nesac"
+            "command": "file=$(python3 -c \"import json,sys; print(json.load(sys.stdin)['tool_input']['file_path'])\"); \\\ncase \"$file\" in \\\n  *.go) gofmt -w \"$file\" ;; \\\n  *.ts|*.tsx|*.js|*.jsx|*.css|*.json) (cd frontend && pnpm exec prettier --write \"$file\") ;; \\\nesac"
           }
         ]
       }
