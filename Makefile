@@ -1,4 +1,4 @@
-.PHONY: dev backend frontend lint test
+.PHONY: dev backend frontend lint test test-e2e
 
 backend:
 	cd backend && go run ./cmd/server
@@ -18,3 +18,7 @@ lint:
 
 test:
 	cd backend && go test ./...
+	cd frontend && pnpm test
+
+test-e2e:
+	cd frontend && pnpm test:e2e

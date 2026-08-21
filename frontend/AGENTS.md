@@ -7,7 +7,3 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
-
-## Required skills
-
-Before any UI/frontend design, build, review, or fix task, load the `ui-ux-pro-max` skill first — regardless of whether its description-based matching would trigger it on its own.

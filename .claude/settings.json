@@ -1,17 +1,9 @@
 {
   "enableAllProjectMcpServers": true,
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "caveman@caveman": true
+    "superpowers@claude-plugins-official": true
   },
-  "extraKnownMarketplaces": {
-    "caveman": {
-      "source": {
-        "source": "github",
-        "repo": "JuliusBrussee/caveman"
-      }
-    }
-  },
+  "extraKnownMarketplaces": {},
   "hooks": {
     "PostToolUse": [
       {

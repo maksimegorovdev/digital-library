@@ -1,4 +1,4 @@
-# digital-library
+# Digital Library
 
 Monorepo for the digital-library project: a Go backend and a Next.js
 frontend.
