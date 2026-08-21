@@ -22,3 +22,6 @@
 
 # Playwright MCP
 .playwright-mcp/
+
+# Claude Code local state
+.claude/logs/
