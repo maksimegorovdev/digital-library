@@ -25,3 +25,4 @@
 
 # Claude Code local state
 .claude/logs/
+.claude/worktrees/
