@@ -67,7 +67,7 @@ export async function fetchBooks(
       return { ok: false, error: `backend responded with ${res.status}` };
     }
     const body = (await res.json()) as { books: Book[]; total: number };
-    return { ok: true, books: body.books, total: body.total };
+    return { ok: true, books: body.books ?? [], total: body.total };
   } catch (err) {
     return {
       ok: false,
