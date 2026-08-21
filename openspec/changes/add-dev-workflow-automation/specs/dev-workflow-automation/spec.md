@@ -1,20 +1,5 @@
 ## ADDED Requirements
 
-### Requirement: Scoped test verification before turn completion
-A `Stop` hook in `.claude/settings.json` SHALL run the test suite for whichever part of the monorepo changed during the turn, determined via `git diff HEAD --name-only`, and SHALL NOT run the full suite when no code paths changed. Playwright e2e tests (`pnpm test:e2e`) SHALL be excluded from this automatic run.
-
-#### Scenario: Backend changes trigger backend tests
-- **WHEN** Claude's turn ends and `git diff HEAD --name-only` includes a path under `backend/`
-- **THEN** the hook SHALL run `go test ./...` in `backend/` and surface failures back to Claude
-
-#### Scenario: Frontend changes trigger frontend unit tests
-- **WHEN** Claude's turn ends and `git diff HEAD --name-only` includes a path under `frontend/`
-- **THEN** the hook SHALL run `pnpm test` in `frontend/` and surface failures back to Claude, without running `pnpm test:e2e`
-
-#### Scenario: No code changes skip the test run
-- **WHEN** Claude's turn ends and `git diff HEAD --name-only` contains no paths under `backend/` or `frontend/`
-- **THEN** the hook SHALL NOT run any test command
-
 ### Requirement: Scoped format-on-edit automation
 A `PostToolUse` hook in `.claude/settings.json` SHALL format the single file just written by an `Edit` or `Write` tool call, using `gofmt -w` for `.go` files and `prettier --write` for frontend source files, without reformatting any other file in the project.
 

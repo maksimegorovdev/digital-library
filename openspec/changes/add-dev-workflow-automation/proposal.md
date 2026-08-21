@@ -4,15 +4,9 @@ The project follows an OpenSpec + Superpowers workflow, which implies TDD, but n
 
 ## What Changes
 
-**Test verification before a turn ends**
-- From: Tests are only run when the developer or Claude remembers to run `go test`/`pnpm test` manually.
-- To: A `Stop` hook runs `go test ./...` and/or `pnpm test` automatically, scoped to whichever of `backend/`/`frontend/` actually changed (via `git diff HEAD --name-only`); `pnpm test:e2e` is excluded from the automatic run.
-- Reason: Catch unverified changes without re-running the full suite, including e2e, after every single edit.
-- Impact: Non-breaking; adds a `.claude/settings.json` hook. No source code changes.
-
 **Format/lint automation, two layers**
 - From: Formatting/linting only happens when `make lint` is run manually; frontend has no formatter at all (only eslint).
-- To: A `PostToolUse` hook auto-formats the single touched file after `Edit`/`Write` (`gofmt -w` for `.go`, `prettier --write` for frontend source); a `lefthook` pre-commit hook re-checks all staged files (`gofmt -l`, `golangci-lint run`, `prettier --check`, `eslint`) as a tool-independent safety net.
+- To: A `PostToolUse` hook auto-formats the single touched file after `Edit`/`Write` (`gofmt -w` for `.go`, `prettier --write` for frontend source); a `lefthook` pre-commit hook re-checks all staged files as a tool-independent safety net — formatters (`gofmt -w`, `prettier --write`) auto-fix and re-stage, linters (`golangci-lint run`, `eslint`) block the commit on failure.
 - Reason: Fast, cheap feedback during Claude Code sessions, plus a safety net that also covers edits made outside Claude Code.
 - Impact: Non-breaking; adds `prettier` + `prettier-plugin-tailwindcss` to frontend devDependencies, adds `lefthook` as a repo dev tool, adds `.prettierrc` and a `lefthook.yml`.
 
@@ -31,14 +25,14 @@ The project follows an OpenSpec + Superpowers workflow, which implies TDD, but n
 ## Capabilities
 
 ### New Capabilities
-- `dev-workflow-automation`: Claude Code session automation — a scoped test-run hook, a scoped format/lint hook, a skill/MCP activity logging hook, and the `ui-ux-pro-max` force-trigger rule for frontend work.
+- `dev-workflow-automation`: Claude Code session automation — a scoped format/lint hook, a skill/MCP activity logging hook, and the `ui-ux-pro-max` force-trigger rule for frontend work.
 
 ### Modified Capabilities
 - `monorepo-tooling`: add a git pre-commit safety net (`lefthook` running formatters/linters on staged files across both `backend/` and `frontend/`) and a frontend formatter (`prettier` + `prettier-plugin-tailwindcss`, `.prettierrc`, `format` script) alongside the existing `make lint`/`make test` targets.
 
 ## Impact
 
-- `.claude/settings.json`: new `Stop`, `PostToolUse`, and `PreToolUse` hooks (written via the `update-config` skill).
+- `.claude/settings.json`: new `PostToolUse` and `PreToolUse` hooks (written via the `update-config` skill).
 - `.claude/logs/`: new gitignored directory for the skill-activity log.
 - `frontend/package.json`: new `prettier`, `prettier-plugin-tailwindcss` devDependencies and a `format` script; new `.prettierrc`.
 - Repo root: new `lefthook.yml` and `lefthook` as a dev-tool dependency (git hook installed locally, no runtime app impact).

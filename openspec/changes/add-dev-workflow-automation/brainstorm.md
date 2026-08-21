@@ -33,17 +33,14 @@
 
 Alternative C (слоистый подход). Компоненты:
 
-1. **Тесты** — Stop hook в `.claude/settings.json`, скоупится по `git diff --name-only` (backend/frontend), гоняет `go test ./...` и/или `pnpm test` (без `test:e2e`). Ничего не запускается, если не менялись код-пути.
-2. **Lint/format** — PostToolUse hook на `Edit`/`Write` точечно форматирует изменённый файл (`gofmt -w` для `.go`, `prettier --write` для frontend-файлов); lefthook на pre-commit проверяет все staged-файлы как страховку. Prettier + `prettier-plugin-tailwindcss` добавляются во frontend (сейчас есть только eslint).
-3. **ui-ux-pro-max** — явное force-trigger правило в `frontend/AGENTS.md`, аналогичное существующему списку Go-скиллов в корневом `AGENTS.md`.
-4. **Видимость skills/MCP** — PreToolUse hook на `Skill`/`Task` пишет строку (таймстамп, имя, входные данные) в `.claude/logs/skill-activity.log` (в `.gitignore`); в AGENTS.md — как это проверять (`tail -f` лога или разбор транскрипта).
+1. **Lint/format** — PostToolUse hook на `Edit`/`Write` точечно форматирует изменённый файл (`gofmt -w` для `.go`, `prettier --write` для frontend-файлов); lefthook на pre-commit проверяет все staged-файлы как страховку. Prettier + `prettier-plugin-tailwindcss` добавляются во frontend (сейчас есть только eslint).
+2. **ui-ux-pro-max** — явное force-trigger правило в `frontend/AGENTS.md`, аналогичное существующему списку Go-скиллов в корневом `AGENTS.md`.
+3. **Видимость skills/MCP** — PreToolUse hook на `Skill`/`Task` пишет строку (таймстамп, имя, входные данные) в `.claude/logs/skill-activity.log` (в `.gitignore`); в AGENTS.md — как это проверять (`tail -f` лога или разбор транскрипта).
 
 Реализация hooks — через скилл `update-config`, а не ручное редактирование JSON.
 
 ## Key Decisions
 
-- Тестовый hook — `Stop`, а не `PostToolUse`, чтобы не гонять тесты на каждую правку файла (запрос пользователя на экономность).
-- `test:e2e` (Playwright) исключён из автоматического хука — слишком тяжёлый для каждого хода, остаётся ручным/CI-шагом.
 - Формат/lint hook скоупится на изменённый файл, а не весь проект — дёшево и быстро.
 - Для git-хуков выбран lefthook, а не husky — не тянет Node-специфичные зависимости, естественнее для смешанного Go+Node монорепо.
 - Prettier + `prettier-plugin-tailwindcss` — новая зависимость frontend, которой сейчас нет (только eslint).

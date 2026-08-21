@@ -28,7 +28,7 @@
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
-- Produces: `pnpm --dir frontend format` command and `frontend/.prettierrc` config, both consumed by Task 3 (Claude PostToolUse hook) and Task 2 (lefthook `prettier --check`).
+- Produces: `pnpm --dir frontend format` command and `frontend/.prettierrc` config, both consumed by Task 3 (Claude PostToolUse hook) and Task 2 (lefthook `prettier --write`).
 
 - [ ] **Step 1: Add prettier dependencies**
 
@@ -44,7 +44,8 @@ Create `frontend/.prettierrc`:
 {
   "plugins": ["prettier-plugin-tailwindcss"],
   "semi": true,
-  "singleQuote": false,
+  "singleQuote": true,
+  "singleAttributePerLine": true,
   "trailingComma": "all"
 }
 ```
@@ -101,8 +102,8 @@ pre-commit:
     go-fmt:
       root: "backend/"
       glob: "*.go"
-      run: gofmt -l {staged_files}
-      fail_text: "gofmt found unformatted files — run `gofmt -w` on them"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
     go-lint:
       root: "backend/"
       glob: "*.go"
@@ -110,7 +111,8 @@ pre-commit:
     frontend-format:
       root: "frontend/"
       glob: "*.{ts,tsx,js,jsx,css,json}"
-      run: pnpm exec prettier --check {staged_files}
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
     frontend-lint:
       root: "frontend/"
       glob: "*.{ts,tsx,js,jsx}"
@@ -166,8 +168,6 @@ In `.gitignore` (repo root), under a new `# Claude Code local state` section, ad
 .claude/logs/
 ```
 
-> **Removed:** the `Stop` hook (scoped test run on turn end) was implemented and then removed per explicit user request during apply — live in-session testing showed Claude Code hook config added mid-session is not picked up by the current session, and the user decided against keeping a Stop-time test gate at all rather than deferring verification to a fresh session. `PostToolUse` (format) and `PreToolUse` (activity log) remain.
-
 - [ ] **Step 2: Invoke `update-config` to add the PostToolUse hook (scoped format)**
 
 Invoke the `update-config` skill with this exact hook to add under the `PostToolUse` event, matcher `Edit|Write`, in `.claude/settings.json`:
@@ -177,7 +177,7 @@ Invoke the `update-config` skill with this exact hook to add under the `PostTool
 file=$(python3 -c "import json,sys; print(json.load(sys.stdin)['tool_input']['file_path'])"); \
 case "$file" in \
   *.go) gofmt -w "$file" ;; \
-  *.ts|*.tsx|*.js|*.jsx|*.css|*.json) (cd frontend && pnpm exec prettier --write "../$file") ;; \
+  *.ts|*.tsx|*.js|*.jsx|*.css|*.json) (cd frontend && pnpm exec prettier --write "$file") ;; \
 esac
 ```
 
@@ -206,7 +206,7 @@ Run:
 ```bash
 python3 -m json.tool .claude/settings.json > /dev/null && echo "valid json"
 ```
-Expected: prints `valid json`; manually inspect the file to confirm `hooks.PostToolUse`, `hooks.PreToolUse` entries exist with the commands above (no `hooks.Stop`).
+Expected: prints `valid json`; manually inspect the file to confirm `hooks.PostToolUse`, `hooks.PreToolUse` entries exist with the commands above.
 
 - [ ] **Step 5: Commit**
 
