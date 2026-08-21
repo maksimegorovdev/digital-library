@@ -16,7 +16,7 @@ func testConfig() config.Config {
 func TestRouterRecoversFromPanic(t *testing.T) {
 	t.Parallel()
 
-	r := httpapi.NewRouter(testConfig())
+	r := httpapi.NewRouter(testConfig(), &fakeBookLister{})
 	r.Get("/panic", func(http.ResponseWriter, *http.Request) {
 		panic("boom")
 	})
@@ -35,7 +35,7 @@ func TestRouterAllowsConfiguredOrigin(t *testing.T) {
 	t.Parallel()
 
 	cfg := testConfig()
-	r := httpapi.NewRouter(cfg)
+	r := httpapi.NewRouter(cfg, &fakeBookLister{})
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	req.Header.Set("Origin", cfg.FrontendOrigin)

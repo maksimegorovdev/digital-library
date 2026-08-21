@@ -19,7 +19,7 @@ const maxCORSPreflightAgeSeconds = 300
 // NewRouter builds the backend's HTTP router: request ID propagation,
 // structured logging, panic recovery, CORS for the configured frontend
 // origin, and the service's routes.
-func NewRouter(cfg config.Config) *chi.Mux {
+func NewRouter(cfg config.Config, books bookLister) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -33,6 +33,7 @@ func NewRouter(cfg config.Config) *chi.Mux {
 	}))
 
 	r.Get("/healthz", HealthzHandler)
+	r.Get("/books", BooksHandler(books))
 
 	return r
 }
