@@ -9,7 +9,7 @@ pre-commit:
     go-lint:
       root: "backend/"
       glob: "*.go"
-      run: golangci-lint run {staged_files}
+      run: golangci-lint run ./...
     frontend-format:
       root: "frontend/"
       glob: "*.{ts,tsx,js,jsx,css,json}"

@@ -2,13 +2,18 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/digital-library/backend/internal/config"
 	"github.com/digital-library/backend/internal/httpapi"
+	"github.com/digital-library/backend/internal/store"
 )
 
 const (
@@ -20,11 +25,50 @@ const (
 	readTimeout = 10 * time.Second
 	// writeTimeout bounds how long the server has to write a response.
 	writeTimeout = 10 * time.Second
+
+	maxOpenConns    = 25
+	maxIdleConns    = 10
+	connMaxLifetime = 5 * time.Minute
+	connMaxIdleTime = time.Minute
+	pingTimeout     = 5 * time.Second
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+// run wires up the database pool and HTTP server. It returns an error
+// instead of calling os.Exit directly so that deferred cleanup (closing
+// the database pool, releasing the ping context) always runs.
+func run() error {
 	cfg := config.Load()
-	r := httpapi.NewRouter(cfg)
+
+	db, err := sql.Open("pgx", cfg.DatabaseURL)
+	if err != nil {
+		slog.Error("opening database", "error", err)
+		return err
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("closing database", "error", err)
+		}
+	}()
+
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
+	db.SetConnMaxIdleTime(connMaxIdleTime)
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), pingTimeout)
+	defer cancel()
+	if err := db.PingContext(pingCtx); err != nil {
+		slog.Error("connecting to database", "error", err)
+		return err
+	}
+
+	r := httpapi.NewRouter(cfg, store.New(db))
 
 	addr := ":" + cfg.Port
 	srv := &http.Server{
@@ -38,6 +82,7 @@ func main() {
 	slog.Info("backend listening", "addr", addr, "frontend_origin", cfg.FrontendOrigin)
 	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("server exited", "error", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }

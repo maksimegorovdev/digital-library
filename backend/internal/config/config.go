@@ -10,6 +10,8 @@ type Config struct {
 	Port string
 	// FrontendOrigin is the origin allowed by CORS for browser requests.
 	FrontendOrigin string
+	// DatabaseURL is the Postgres connection string.
+	DatabaseURL string
 }
 
 // Load reads configuration from environment variables, applying defaults
@@ -18,6 +20,7 @@ func Load() Config {
 	return Config{
 		Port:           envOrDefault("PORT", "8080"),
 		FrontendOrigin: envOrDefault("FRONTEND_ORIGIN", "http://localhost:3000"),
+		DatabaseURL:    envOrDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/digital_library?sslmode=disable"),
 	}
 }
 
