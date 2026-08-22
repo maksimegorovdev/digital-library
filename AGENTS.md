@@ -5,9 +5,16 @@ This file covers rules shared across the whole repo. `backend/` and `frontend/` 
 - `backend/AGENTS.md` — backend-specific rules
 - `frontend/AGENTS.md` — frontend-specific rules
 
-## Language rules
+## Agent skills
 
-- Claude's own communication — chat responses, clarifying/planning questions, status updates — must always be in Russian, regardless of which skill or workflow is active.
-- Within OpenSpec workflows (`openspec-*` / `opsx:*` skills, including `superpowers:brainstorming`), only `brainstorm.md` is written in Russian, since it's the file the user reads and edits directly.
-- All other Markdown artifacts produced by OpenSpec or Superpowers skills — `proposal.md`, `design.md`, `tasks.md`, spec deltas, and any other generated `.md` file — must be written in English, to save tokens on repeated re-reads during implementation.
-- When generating `proposal.md`/`design.md`/`tasks.md` from a Russian `brainstorm.md`, translate the intent faithfully rather than transliterating — preserve nuance, don't just machine-translate line by line.
+### Issue tracker
+
+Issues live as GitHub issues in `maksimegorovdev/digital-library`, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.

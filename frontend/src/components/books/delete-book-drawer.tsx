@@ -18,18 +18,25 @@ export function DeleteBookDrawer({
   open,
   onOpenChange,
   book,
+  onDeleted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   book: Book | null;
+  onDeleted: () => void;
 }) {
   async function handleConfirm() {
     if (!book) return;
-    await deleteBook(book.id);
-    toast('Функция скоро появится', {
-      description: 'Удаление книг пока не подключено к серверу.',
-    });
+
+    const result = await deleteBook(book.id);
+    if (!result.ok) {
+      toast.error('Не удалось удалить книгу', { description: result.error });
+      return;
+    }
+
+    toast.success('Книга удалена');
     onOpenChange(false);
+    onDeleted();
   }
 
   return (

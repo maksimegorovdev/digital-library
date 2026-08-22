@@ -1,8 +1,5 @@
 {
   "enableAllProjectMcpServers": true,
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
-  },
   "extraKnownMarketplaces": {},
   "hooks": {
     "PostToolUse": [

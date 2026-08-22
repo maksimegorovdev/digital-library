@@ -49,15 +49,17 @@ export function BookFormDrawer({
   open,
   onOpenChange,
   book,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   book?: Book;
+  onSaved: () => void;
 }) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<BookFormValues>({
     resolver: zodResolver(bookFormSchema),
     values: toDefaultValues(book),
@@ -72,11 +74,20 @@ export function BookFormDrawer({
       coverUrl: values.coverUrl || undefined,
     };
 
-    await (book ? updateBook(book.id, input) : createBook(input));
+    const result = book
+      ? await updateBook(book.id, input)
+      : await createBook(input);
 
-    toast('Функция скоро появится', {
-      description: 'Сохранение книг пока не подключено к серверу.',
-    });
+    if (!result.ok) {
+      toast.error('Не удалось сохранить книгу', {
+        description: result.error,
+      });
+      return;
+    }
+
+    toast.success(book ? 'Книга обновлена' : 'Книга добавлена');
+    onOpenChange(false);
+    onSaved();
   }
 
   return (
@@ -158,7 +169,12 @@ export function BookFormDrawer({
             </Field>
           </FieldGroup>
           <DrawerFooter className="px-0">
-            <Button type="submit">Сохранить</Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+            >
+              Сохранить
+            </Button>
             <DrawerClose render={<Button variant="outline">Отмена</Button>} />
           </DrawerFooter>
         </form>

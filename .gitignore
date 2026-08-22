@@ -1,6 +1,5 @@
 .idea
 .DS_Store
-.worktrees
 
 # Backend (Go)
 /backend/server
@@ -18,12 +17,8 @@
 !.env.local.example
 !backend/.env.example
 
-# SDD workspace
-.superpowers/
-
 # Playwright MCP
 .playwright-mcp/
 
 # Claude Code local state
 .claude/logs/
-.claude/worktrees/
