@@ -18,10 +18,12 @@ type fakeBookLister struct {
 	err   error
 
 	gotLimit, gotOffset int
+	gotFilter           store.BookFilter
 }
 
-func (f *fakeBookLister) ListBooks(_ context.Context, limit, offset int) ([]store.Book, int, error) {
+func (f *fakeBookLister) ListBooks(_ context.Context, limit, offset int, filter store.BookFilter) ([]store.Book, int, error) {
 	f.gotLimit, f.gotOffset = limit, offset
+	f.gotFilter = filter
 	if f.err != nil {
 		return nil, 0, f.err
 	}
@@ -103,6 +105,54 @@ func TestBooksHandlerReturnsEmptyList(t *testing.T) {
 	}
 	if len(body.Books) != 0 {
 		t.Fatalf("books = %+v, want empty", body.Books)
+	}
+}
+
+func TestBooksHandlerParsesSearchAndGenre(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeBookLister{books: []store.Book{}, total: 0}
+
+	req := httptest.NewRequest(http.MethodGet, "/books?search=dune&genre=Fantasy", nil)
+	rec := httptest.NewRecorder()
+
+	httpapi.BooksHandler(fake).ServeHTTP(rec, req)
+
+	want := store.BookFilter{Search: "dune", Genre: "Fantasy"}
+	if fake.gotFilter != want {
+		t.Fatalf("ListBooks called with filter=%+v, want %+v", fake.gotFilter, want)
+	}
+}
+
+func TestBooksHandlerTreatsMissingSearchAndGenreAsNoFilter(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeBookLister{books: []store.Book{}, total: 0}
+
+	req := httptest.NewRequest(http.MethodGet, "/books", nil)
+	rec := httptest.NewRecorder()
+
+	httpapi.BooksHandler(fake).ServeHTTP(rec, req)
+
+	want := store.BookFilter{}
+	if fake.gotFilter != want {
+		t.Fatalf("ListBooks called with filter=%+v, want %+v", fake.gotFilter, want)
+	}
+}
+
+func TestBooksHandlerTreatsEmptySearchAndGenreAsNoFilter(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeBookLister{books: []store.Book{}, total: 0}
+
+	req := httptest.NewRequest(http.MethodGet, "/books?search=&genre=", nil)
+	rec := httptest.NewRecorder()
+
+	httpapi.BooksHandler(fake).ServeHTTP(rec, req)
+
+	want := store.BookFilter{}
+	if fake.gotFilter != want {
+		t.Fatalf("ListBooks called with filter=%+v, want %+v", fake.gotFilter, want)
 	}
 }
 

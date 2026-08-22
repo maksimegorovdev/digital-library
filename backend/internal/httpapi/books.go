@@ -17,7 +17,7 @@ const (
 
 // bookLister lists a page of books. store.Store satisfies this interface.
 type bookLister interface {
-	ListBooks(ctx context.Context, limit, offset int) ([]store.Book, int, error)
+	ListBooks(ctx context.Context, limit, offset int, filter store.BookFilter) ([]store.Book, int, error)
 }
 
 type booksResponse struct {
@@ -33,8 +33,12 @@ func BooksHandler(lister bookLister) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit := parseLimit(r.URL.Query().Get("limit"))
 		offset := parseOffset(r.URL.Query().Get("offset"))
+		filter := store.BookFilter{
+			Search: r.URL.Query().Get("search"),
+			Genre:  r.URL.Query().Get("genre"),
+		}
 
-		books, total, err := lister.ListBooks(r.Context(), limit, offset)
+		books, total, err := lister.ListBooks(r.Context(), limit, offset, filter)
 		if err != nil {
 			slog.Error("listing books", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
