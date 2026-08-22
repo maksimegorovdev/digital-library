@@ -86,3 +86,45 @@ export async function fetchBooks(
     };
   }
 }
+
+export type BookInput = {
+  title: string;
+  author: string;
+  year?: number;
+  genre?: string;
+  coverUrl?: string;
+};
+
+export type MutationResult =
+  { ok: true } | { ok: false; error: 'not_implemented' };
+
+/**
+ * Stub for creating a book. Always reports "not implemented" — a
+ * follow-up change will replace this with a real POST /books call.
+ */
+export async function createBook(input: BookInput): Promise<MutationResult> {
+  void input;
+  return { ok: false, error: 'not_implemented' };
+}
+
+/**
+ * Stub for updating a book. Always reports "not implemented" — a
+ * follow-up change will replace this with a real PATCH /books/:id call.
+ */
+export async function updateBook(
+  id: number,
+  input: BookInput,
+): Promise<MutationResult> {
+  void id;
+  void input;
+  return { ok: false, error: 'not_implemented' };
+}
+
+/**
+ * Stub for deleting a book. Always reports "not implemented" — a
+ * follow-up change will replace this with a real DELETE /books/:id call.
+ */
+export async function deleteBook(id: number): Promise<MutationResult> {
+  void id;
+  return { ok: false, error: 'not_implemented' };
+}

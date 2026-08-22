@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchBooks } from '@/lib/api';
+import { createBook, deleteBook, fetchBooks, updateBook } from '@/lib/api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -130,5 +130,44 @@ describe('fetchBooks', () => {
     const [url] = fetchMock.mock.calls[0] as [string, unknown];
     expect(url).not.toContain('search');
     expect(url).not.toContain('genre');
+  });
+});
+
+describe('createBook', () => {
+  it('resolves with not_implemented without making a network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await createBook({ title: 'Dune', author: 'Frank Herbert' });
+
+    expect(result).toEqual({ ok: false, error: 'not_implemented' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateBook', () => {
+  it('resolves with not_implemented without making a network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await updateBook(1, {
+      title: 'Dune',
+      author: 'Frank Herbert',
+    });
+
+    expect(result).toEqual({ ok: false, error: 'not_implemented' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteBook', () => {
+  it('resolves with not_implemented without making a network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await deleteBook(1);
+
+    expect(result).toEqual({ ok: false, error: 'not_implemented' });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
