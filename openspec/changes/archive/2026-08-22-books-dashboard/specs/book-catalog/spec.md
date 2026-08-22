@@ -1,32 +1,28 @@
-# book-catalog Specification
+## REMOVED Requirements
 
-## Purpose
+### Requirement: Book List Page
 
-TBD - created by archiving change screen-list-books. Update Purpose after archive.
+**Reason**: Replaced by a client-fetched data-table dashboard page (see
+"Book Dashboard Page" below) — the frontend no longer server-renders
+the book list.
 
-## Requirements
+**Migration**: No server action required. Any consumer relying on
+`/books` returning fully server-rendered HTML for the book grid should
+instead expect a client-rendered data table hydrated via
+`GET /books`.
 
-### Requirement: Book Storage
-The system SHALL persist books in a Postgres `books` table with mandatory `title` and `author` fields and optional `year`, `genre`, and `cover_url` fields.
+### Requirement: Load More Pagination
 
-#### Scenario: Book with all optional fields absent
-- **WHEN** a book row is inserted with only `title` and `author` set
-- **THEN** the row is persisted with `year`, `genre`, and `cover_url` stored as NULL, and no other field is required
+**Reason**: Replaced by page-based pagination on the data table (see
+"Book Dashboard Pagination" below) — "load more" no longer exists.
 
-### Requirement: List Books Endpoint
-`GET /books` SHALL return a paginated list of books ordered by `author`, then `title`, then `id`, along with the total book count and the effective pagination parameters.
+**Migration**: No server action required; the `GET /books`
+`limit`/`offset` contract is unchanged, only how the frontend drives
+it.
 
-#### Scenario: Default request returns the first page
-- **WHEN** a client requests `GET /books` without query parameters
-- **THEN** the backend responds with HTTP 200 and a JSON body containing up to 50 books ordered by author, then title, then id, plus `total`, `limit`, and `offset`
+---
 
-#### Scenario: Custom limit and offset are honored
-- **WHEN** a client requests `GET /books?limit=X&offset=Y` with valid positive integers
-- **THEN** the response contains at most X books, starting after the Y-th book in the same stable order, and echoes back the effective `limit`/`offset`
-
-#### Scenario: Database is unreachable
-- **WHEN** the backend cannot reach the database while handling `GET /books`
-- **THEN** the endpoint responds with HTTP 500, logs the underlying error via structured logging, and does not leak internal error details in the response body
+## ADDED Requirements
 
 ### Requirement: Book Dashboard Page
 The frontend SHALL render `/books` as a client-rendered data table

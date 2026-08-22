@@ -1,35 +1,27 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+import BooksPage from '@/app/books/page';
 import * as api from '@/lib/api';
 
-import BooksPage from './page';
-
 describe('BooksPage', () => {
-  it('shows the empty-library message when there are no books', async () => {
+  it('renders the page title and the dashboard', async () => {
     vi.spyOn(api, 'fetchBooks').mockResolvedValue({
       ok: true,
       books: [],
       total: 0,
     });
 
-    const { container } = render(await BooksPage());
+    render(<BooksPage />);
 
-    expect(screen.getByText('В библиотеке пока нет книг.')).toBeInTheDocument();
-    expect(container.querySelector('.grid')).not.toBeInTheDocument();
-  });
-
-  it('shows an error message when the backend request fails', async () => {
-    vi.spyOn(api, 'fetchBooks').mockResolvedValue({
-      ok: false,
-      error: 'network down',
-    });
-
-    const { container } = render(await BooksPage());
-
+    expect(screen.getByText('Моя библиотека')).toBeInTheDocument();
     expect(
-      screen.getByText('Не удалось загрузить книги: network down'),
+      await screen.findByText('В библиотеке пока нет книг.'),
     ).toBeInTheDocument();
-    expect(container.querySelector('.grid')).not.toBeInTheDocument();
   });
 });

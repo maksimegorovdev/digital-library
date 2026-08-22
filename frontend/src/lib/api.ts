@@ -35,7 +35,8 @@ export async function fetchHealth(): Promise<HealthStatus> {
   }
 }
 
-export const BOOKS_PAGE_SIZE = 50;
+export const DEFAULT_BOOKS_PAGE_SIZE = 10;
+export const BOOKS_PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 
 export type Book = {
   id: number;
@@ -46,21 +47,31 @@ export type Book = {
   coverUrl: string | null;
 };
 
+export type BooksQuery = {
+  page: number;
+  pageSize: number;
+  search?: string;
+  genre?: string;
+};
+
 export type BooksResult =
   { ok: true; books: Book[]; total: number } | { ok: false; error: string };
 
 /**
  * Fetches a page of books from the backend's /books endpoint and
  * normalizes both network failures and non-200 responses into a
- * BooksResult the UI can render without throwing.
+ * BooksResult the UI can render without throwing. `search`/`genre` on
+ * BooksQuery are accepted for forward-compatibility with server-side
+ * filtering but are intentionally not sent yet.
  */
 export async function fetchBooks(
-  offset = 0,
-  limit = BOOKS_PAGE_SIZE,
+  query: BooksQuery = { page: 1, pageSize: DEFAULT_BOOKS_PAGE_SIZE },
 ): Promise<BooksResult> {
+  const { page, pageSize } = query;
+  const offset = (page - 1) * pageSize;
   try {
     const res = await fetch(
-      `${getApiBaseUrl()}/books?limit=${limit}&offset=${offset}`,
+      `${getApiBaseUrl()}/books?limit=${pageSize}&offset=${offset}`,
       { cache: 'no-store', signal: AbortSignal.timeout(5000) },
     );
     if (!res.ok) {
@@ -74,4 +85,46 @@ export async function fetchBooks(
       error: err instanceof Error ? err.message : 'unknown error',
     };
   }
+}
+
+export type BookInput = {
+  title: string;
+  author: string;
+  year?: number;
+  genre?: string;
+  coverUrl?: string;
+};
+
+export type MutationResult =
+  { ok: true } | { ok: false; error: 'not_implemented' };
+
+/**
+ * Stub for creating a book. Always reports "not implemented" — a
+ * follow-up change will replace this with a real POST /books call.
+ */
+export async function createBook(input: BookInput): Promise<MutationResult> {
+  void input;
+  return { ok: false, error: 'not_implemented' };
+}
+
+/**
+ * Stub for updating a book. Always reports "not implemented" — a
+ * follow-up change will replace this with a real PATCH /books/:id call.
+ */
+export async function updateBook(
+  id: number,
+  input: BookInput,
+): Promise<MutationResult> {
+  void id;
+  void input;
+  return { ok: false, error: 'not_implemented' };
+}
+
+/**
+ * Stub for deleting a book. Always reports "not implemented" — a
+ * follow-up change will replace this with a real DELETE /books/:id call.
+ */
+export async function deleteBook(id: number): Promise<MutationResult> {
+  void id;
+  return { ok: false, error: 'not_implemented' };
 }
