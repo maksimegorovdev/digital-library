@@ -43,6 +43,11 @@ func main() {
 // instead of calling os.Exit directly so that deferred cleanup (closing
 // the database pool, releasing the ping context) always runs.
 func run() error {
+	if err := loadDotEnv(); err != nil {
+		slog.Error("loading .env", "error", err)
+		return err
+	}
+
 	cfg := config.Load()
 
 	db, err := sql.Open("pgx", cfg.DatabaseURL)

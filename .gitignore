@@ -16,6 +16,7 @@
 # Environment
 .env*
 !.env.local.example
+!backend/.env.example
 
 # SDD workspace
 .superpowers/
