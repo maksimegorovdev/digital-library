@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // Book represents a single book in the home library.
@@ -17,6 +18,16 @@ type Book struct {
 	CoverURL *string `json:"coverUrl"`
 }
 
+// BookFilter narrows a book listing. A zero-value field means "no filter"
+// on that dimension.
+type BookFilter struct {
+	// Search matches case-insensitively against title OR author, by
+	// substring containment.
+	Search string
+	// Genre matches by exact equality against the stored genre value.
+	Genre string
+}
+
 // Store provides access to persisted domain data.
 type Store struct {
 	db *sql.DB
@@ -27,21 +38,25 @@ func New(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// ListBooks returns a page of books ordered by author, then title, then
-// id, along with the total number of books in the library.
-func (s *Store) ListBooks(ctx context.Context, limit, offset int) ([]Book, int, error) {
+// ListBooks returns a page of books matching filter, ordered by author,
+// then title, then id, along with the total number of matching books.
+func (s *Store) ListBooks(ctx context.Context, limit, offset int, filter BookFilter) ([]Book, int, error) {
+	where, args := bookFilterClause(filter)
+
 	var total int
-	if err := s.db.QueryRowContext(ctx, "SELECT count(*) FROM books").Scan(&total); err != nil {
+	countQuery := "SELECT count(*) FROM books" + where
+	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting books: %w", err)
 	}
 
-	rows, err := s.db.QueryContext(ctx,
+	selectQuery := fmt.Sprintf(
 		`SELECT id, title, author, year, genre, cover_url
-		   FROM books
+		   FROM books%s
 		  ORDER BY author, title, id
-		  LIMIT $1 OFFSET $2`,
-		limit, offset,
+		  LIMIT $%d OFFSET $%d`,
+		where, len(args)+1, len(args)+2,
 	)
+	rows, err := s.db.QueryContext(ctx, selectQuery, append(args, limit, offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying books: %w", err)
 	}
@@ -60,4 +75,31 @@ func (s *Store) ListBooks(ctx context.Context, limit, offset int) ([]Book, int, 
 	}
 
 	return books, total, nil
+}
+
+// likePatternEscaper escapes ILIKE wildcard characters so a search term is
+// matched as a literal substring, not interpreted as a pattern.
+var likePatternEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// bookFilterClause builds a parameterized SQL WHERE clause (or "" for no
+// filter) and its positional args for filter. The returned args are always
+// safe to pass alongside the clause: values never appear in the SQL text
+// itself, only as placeholders.
+func bookFilterClause(filter BookFilter) (string, []any) {
+	var conditions []string
+	var args []any
+
+	if search := strings.TrimSpace(filter.Search); search != "" {
+		args = append(args, "%"+likePatternEscaper.Replace(search)+"%")
+		conditions = append(conditions, fmt.Sprintf("(title ILIKE $%d OR author ILIKE $%d)", len(args), len(args)))
+	}
+	if filter.Genre != "" {
+		args = append(args, filter.Genre)
+		conditions = append(conditions, fmt.Sprintf("genre = $%d", len(args)))
+	}
+
+	if len(conditions) == 0 {
+		return "", nil
+	}
+	return " WHERE " + strings.Join(conditions, " AND "), args
 }

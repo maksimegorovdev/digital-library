@@ -54,7 +54,7 @@ func TestListBooksOrdersByAuthorTitleID(t *testing.T) {
 	seedBook(t, db, "Book B", "Author Z", nil, nil, nil)
 	seedBook(t, db, "Book A", "Author A", intPtr(2020), strPtr("Fiction"), strPtr("https://example.com/a.jpg"))
 
-	books, total, err := s.ListBooks(context.Background(), 10, 0)
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{})
 	if err != nil {
 		t.Fatalf("ListBooks() error = %v", err)
 	}
@@ -83,7 +83,7 @@ func TestListBooksRespectsLimitAndOffset(t *testing.T) {
 		seedBook(t, db, "Title", author, nil, nil, nil)
 	}
 
-	books, total, err := s.ListBooks(context.Background(), 1, 1)
+	books, total, err := s.ListBooks(context.Background(), 1, 1, store.BookFilter{})
 	if err != nil {
 		t.Fatalf("ListBooks() error = %v", err)
 	}
@@ -92,5 +92,129 @@ func TestListBooksRespectsLimitAndOffset(t *testing.T) {
 	}
 	if len(books) != 1 || books[0].Author != "Author B" {
 		t.Fatalf("books = %+v, want [Author B]", books)
+	}
+}
+
+func TestListBooksSearchesTitleAndAuthorCaseInsensitively(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Dune", "Frank Herbert", nil, nil, nil)
+	seedBook(t, db, "The Hobbit", "J.R.R. Tolkien", nil, nil, nil)
+	seedBook(t, db, "Foundation", "Isaac Asimov", nil, nil, nil)
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{Search: "hob"})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if len(books) != 1 || books[0].Title != "The Hobbit" {
+		t.Fatalf("books = %+v, want [The Hobbit]", books)
+	}
+
+	books, total, err = s.ListBooks(context.Background(), 10, 0, store.BookFilter{Search: "HERBERT"})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if len(books) != 1 || books[0].Author != "Frank Herbert" {
+		t.Fatalf("books = %+v, want [Frank Herbert]", books)
+	}
+}
+
+func TestListBooksSearchTreatsPercentAndUnderscoreLiterally(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "100% Cotton", "A. Weaver", nil, nil, nil)
+	seedBook(t, db, "Other Book", "B. Writer", nil, nil, nil)
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{Search: "100%"})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if len(books) != 1 || books[0].Title != "100% Cotton" {
+		t.Fatalf("books = %+v, want [100%% Cotton]", books)
+	}
+}
+
+func TestListBooksSearchTrimsSurroundingWhitespace(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Dune", "Frank Herbert", nil, nil, nil)
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{Search: "  dune  "})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if len(books) != 1 || books[0].Title != "Dune" {
+		t.Fatalf("books = %+v, want [Dune]", books)
+	}
+}
+
+func TestListBooksFiltersByExactGenre(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Book A", "Author A", nil, strPtr("Fantasy"), nil)
+	seedBook(t, db, "Book B", "Author B", nil, strPtr("Fantasy Adventure"), nil)
+	seedBook(t, db, "Book C", "Author C", nil, nil, nil)
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{Genre: "Fantasy"})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if len(books) != 1 || books[0].Title != "Book A" {
+		t.Fatalf("books = %+v, want [Book A]", books)
+	}
+}
+
+func TestListBooksCombinesSearchAndGenreFilters(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Dune", "Frank Herbert", nil, strPtr("Science Fiction"), nil)
+	seedBook(t, db, "Dune Messiah", "Frank Herbert", nil, strPtr("Fantasy"), nil)
+	seedBook(t, db, "Foundation", "Isaac Asimov", nil, strPtr("Science Fiction"), nil)
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{Search: "dune", Genre: "Science Fiction"})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("total = %d, want 1", total)
+	}
+	if len(books) != 1 || books[0].Title != "Dune" {
+		t.Fatalf("books = %+v, want [Dune]", books)
+	}
+}
+
+func TestListBooksEmptyFilterValuesMeanNoFilter(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Book A", "Author A", nil, strPtr("Fantasy"), nil)
+	seedBook(t, db, "Book B", "Author B", nil, nil, nil)
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0, store.BookFilter{Search: "", Genre: ""})
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 2 || len(books) != 2 {
+		t.Fatalf("books = %+v, total = %d, want 2 unfiltered books", books, total)
 	}
 }
