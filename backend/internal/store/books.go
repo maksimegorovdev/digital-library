@@ -4,8 +4,12 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 )
+
+// ErrBookNotFound indicates that no book exists with the given ID.
+var ErrBookNotFound = errors.New("book not found")
 
 // Book represents a single book in the home library.
 type Book struct {
@@ -60,4 +64,58 @@ func (s *Store) ListBooks(ctx context.Context, limit, offset int) ([]Book, int, 
 	}
 
 	return books, total, nil
+}
+
+// CreateBook inserts b and returns it with its generated ID.
+func (s *Store) CreateBook(ctx context.Context, b Book) (Book, error) {
+	err := s.db.QueryRowContext(ctx,
+		`INSERT INTO books (title, author, year, genre, cover_url)
+		 VALUES ($1, $2, $3, $4, $5)
+		 RETURNING id`,
+		b.Title, b.Author, b.Year, b.Genre, b.CoverURL,
+	).Scan(&b.ID)
+	if err != nil {
+		return Book{}, fmt.Errorf("inserting book: %w", err)
+	}
+	return b, nil
+}
+
+// UpdateBook replaces every column of the book identified by b.ID with the
+// values in b and returns the updated row. It returns ErrBookNotFound if no
+// book has that ID.
+func (s *Store) UpdateBook(ctx context.Context, b Book) (Book, error) {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE books
+		    SET title = $1, author = $2, year = $3, genre = $4, cover_url = $5
+		  WHERE id = $6`,
+		b.Title, b.Author, b.Year, b.Genre, b.CoverURL, b.ID,
+	)
+	if err != nil {
+		return Book{}, fmt.Errorf("updating book: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return Book{}, fmt.Errorf("checking updated book: %w", err)
+	}
+	if n == 0 {
+		return Book{}, ErrBookNotFound
+	}
+	return b, nil
+}
+
+// DeleteBook removes the book identified by id. It returns ErrBookNotFound
+// if no book has that ID.
+func (s *Store) DeleteBook(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM books WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("deleting book: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking deleted book: %w", err)
+	}
+	if n == 0 {
+		return ErrBookNotFound
+	}
+	return nil
 }

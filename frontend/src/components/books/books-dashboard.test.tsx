@@ -113,4 +113,30 @@ describe('BooksDashboard', () => {
       expect(fetchSpy).toHaveBeenLastCalledWith({ page: 1, pageSize: 20 }),
     );
   });
+
+  it('refetches the current page after a book is successfully saved', async () => {
+    const fetchSpy = vi
+      .spyOn(api, 'fetchBooks')
+      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+    vi.spyOn(api, 'createBook').mockResolvedValue({
+      ok: true,
+      data: book({ id: 2, title: 'New Book' }),
+    });
+
+    render(<BooksDashboard />);
+    await screen.findByText('Dune');
+    const callsBeforeSave = fetchSpy.mock.calls.length;
+
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Добавить книгу' }));
+    await user.type(screen.getByLabelText('Название'), 'New Book');
+    await user.type(screen.getByLabelText('Автор'), 'Someone');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsBeforeSave),
+    );
+  });
 });

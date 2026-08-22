@@ -11,6 +11,7 @@ describe('BookFormDrawer', () => {
       <BookFormDrawer
         open
         onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
       />,
     );
 
@@ -23,6 +24,7 @@ describe('BookFormDrawer', () => {
       <BookFormDrawer
         open
         onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
         book={{
           id: 1,
           title: 'Dune',
@@ -45,6 +47,7 @@ describe('BookFormDrawer', () => {
       <BookFormDrawer
         open
         onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
       />,
     );
 
@@ -55,16 +58,26 @@ describe('BookFormDrawer', () => {
     expect(createSpy).not.toHaveBeenCalled();
   });
 
-  it('calls createBook and shows a toast on valid submit, without closing via a real save', async () => {
+  it('calls createBook, closes and notifies the caller on a successful submit', async () => {
     const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onSaved = vi.fn();
     vi.spyOn(api, 'createBook').mockResolvedValue({
-      ok: false,
-      error: 'not_implemented',
+      ok: true,
+      data: {
+        id: 1,
+        title: 'Dune',
+        author: 'Frank Herbert',
+        year: null,
+        genre: null,
+        coverUrl: null,
+      },
     });
     render(
       <BookFormDrawer
         open
-        onOpenChange={vi.fn()}
+        onOpenChange={onOpenChange}
+        onSaved={onSaved}
       />,
     );
 
@@ -81,5 +94,32 @@ describe('BookFormDrawer', () => {
         coverUrl: undefined,
       }),
     );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onSaved).toHaveBeenCalled();
+  });
+
+  it('keeps the drawer open and does not notify the caller when the save fails', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onSaved = vi.fn();
+    vi.spyOn(api, 'createBook').mockResolvedValue({
+      ok: false,
+      error: 'backend responded with 500',
+    });
+    render(
+      <BookFormDrawer
+        open
+        onOpenChange={onOpenChange}
+        onSaved={onSaved}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Название'), 'Dune');
+    await user.type(screen.getByLabelText('Автор'), 'Frank Herbert');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() => expect(api.createBook).toHaveBeenCalled());
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 });

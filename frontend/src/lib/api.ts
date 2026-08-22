@@ -95,36 +95,109 @@ export type BookInput = {
   coverUrl?: string;
 };
 
-export type MutationResult =
-  { ok: true } | { ok: false; error: 'not_implemented' };
+export type MutationResult<T = void> =
+  { ok: true; data: T } | { ok: false; error: string };
 
 /**
- * Stub for creating a book. Always reports "not implemented" — a
- * follow-up change will replace this with a real POST /books call.
+ * Serializes a BookInput for the wire. Absent optional fields are sent as
+ * explicit `null` rather than omitted: create/update treat the request
+ * body as the book's complete state, so a missing key would be
+ * indistinguishable from "leave unchanged" instead of "clear this field".
  */
-export async function createBook(input: BookInput): Promise<MutationResult> {
-  void input;
-  return { ok: false, error: 'not_implemented' };
+function bookInputBody(input: BookInput) {
+  return {
+    title: input.title,
+    author: input.author,
+    year: input.year ?? null,
+    genre: input.genre ?? null,
+    coverUrl: input.coverUrl ?? null,
+  };
 }
 
 /**
- * Stub for updating a book. Always reports "not implemented" — a
- * follow-up change will replace this with a real PATCH /books/:id call.
+ * Reads the {"error": string} body the backend sends on a non-2xx mutation
+ * response, falling back to a generic status-based message if the body is
+ * missing or malformed.
+ */
+async function parseErrorMessage(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (body.error) return body.error;
+  } catch {
+    // No JSON body (or it didn't parse) — fall through to the generic
+    // message below.
+  }
+  return `backend responded with ${res.status}`;
+}
+
+/**
+ * Creates a book via POST /books and returns it with its generated ID.
+ */
+export async function createBook(
+  input: BookInput,
+): Promise<MutationResult<Book>> {
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/books`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookInputBody(input)),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      return { ok: false, error: await parseErrorMessage(res) };
+    }
+    return { ok: true, data: (await res.json()) as Book };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'unknown error',
+    };
+  }
+}
+
+/**
+ * Replaces a book via PATCH /books/:id and returns the updated book.
  */
 export async function updateBook(
   id: number,
   input: BookInput,
-): Promise<MutationResult> {
-  void id;
-  void input;
-  return { ok: false, error: 'not_implemented' };
+): Promise<MutationResult<Book>> {
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/books/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookInputBody(input)),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      return { ok: false, error: await parseErrorMessage(res) };
+    }
+    return { ok: true, data: (await res.json()) as Book };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'unknown error',
+    };
+  }
 }
 
 /**
- * Stub for deleting a book. Always reports "not implemented" — a
- * follow-up change will replace this with a real DELETE /books/:id call.
+ * Deletes a book via DELETE /books/:id.
  */
 export async function deleteBook(id: number): Promise<MutationResult> {
-  void id;
-  return { ok: false, error: 'not_implemented' };
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/books/${id}`, {
+      method: 'DELETE',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      return { ok: false, error: await parseErrorMessage(res) };
+    }
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'unknown error',
+    };
+  }
 }

@@ -20,6 +20,7 @@ describe('DeleteBookDrawer', () => {
       <DeleteBookDrawer
         open
         onOpenChange={vi.fn()}
+        onDeleted={vi.fn()}
         book={book}
       />,
     );
@@ -29,18 +30,20 @@ describe('DeleteBookDrawer', () => {
     ).toBeInTheDocument();
   });
 
-  it('calls deleteBook and closes when "Удалить" is confirmed', async () => {
+  it('calls deleteBook, closes and notifies the caller when confirmed successfully', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
+    const onDeleted = vi.fn();
     vi.spyOn(api, 'deleteBook').mockResolvedValue({
-      ok: false,
-      error: 'not_implemented',
+      ok: true,
+      data: undefined,
     });
 
     render(
       <DeleteBookDrawer
         open
         onOpenChange={onOpenChange}
+        onDeleted={onDeleted}
         book={book}
       />,
     );
@@ -49,5 +52,31 @@ describe('DeleteBookDrawer', () => {
 
     await waitFor(() => expect(api.deleteBook).toHaveBeenCalledWith(1));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onDeleted).toHaveBeenCalled();
+  });
+
+  it('keeps the drawer open and does not notify the caller when deletion fails', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onDeleted = vi.fn();
+    vi.spyOn(api, 'deleteBook').mockResolvedValue({
+      ok: false,
+      error: 'backend responded with 500',
+    });
+
+    render(
+      <DeleteBookDrawer
+        open
+        onOpenChange={onOpenChange}
+        onDeleted={onDeleted}
+        book={book}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Удалить' }));
+
+    await waitFor(() => expect(api.deleteBook).toHaveBeenCalledWith(1));
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(onDeleted).not.toHaveBeenCalled();
   });
 });

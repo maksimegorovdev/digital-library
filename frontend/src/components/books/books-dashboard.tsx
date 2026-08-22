@@ -31,6 +31,9 @@ export function BooksDashboard() {
   const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
   const [deletingBook, setDeletingBook] = useState<Book | null>(null);
+  // Bumped after a successful create/update/delete to re-run the fetch
+  // below without changing the current page or pageSize.
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +56,9 @@ export function BooksDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, refreshToken]);
+
+  const refresh = () => setRefreshToken((token) => token + 1);
 
   // The fetch snapshot is only trusted once it matches the currently
   // requested page/pageSize — otherwise we're between requests (loading).
@@ -105,6 +110,7 @@ export function BooksDashboard() {
         open={formOpen}
         onOpenChange={setFormOpen}
         book={editingBook}
+        onSaved={refresh}
       />
       <DeleteBookDrawer
         open={deletingBook !== null}
@@ -112,6 +118,7 @@ export function BooksDashboard() {
           if (!open) setDeletingBook(null);
         }}
         book={deletingBook}
+        onDeleted={refresh}
       />
     </div>
   );

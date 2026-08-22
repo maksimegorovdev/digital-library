@@ -16,10 +16,19 @@ import (
 // preflight response before re-checking CORS rules.
 const maxCORSPreflightAgeSeconds = 300
 
+// bookStore is everything the books routes need from persistence.
+// store.Store satisfies this interface.
+type bookStore interface {
+	bookLister
+	bookCreator
+	bookUpdater
+	bookDeleter
+}
+
 // NewRouter builds the backend's HTTP router: request ID propagation,
 // structured logging, panic recovery, CORS for the configured frontend
 // origin, and the service's routes.
-func NewRouter(cfg config.Config, books bookLister) *chi.Mux {
+func NewRouter(cfg config.Config, books bookStore) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -27,13 +36,19 @@ func NewRouter(cfg config.Config, books bookLister) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{cfg.FrontendOrigin},
-		AllowedMethods: []string{http.MethodGet, http.MethodOptions},
+		AllowedMethods: []string{
+			http.MethodGet, http.MethodPost, http.MethodPatch,
+			http.MethodDelete, http.MethodOptions,
+		},
 		AllowedHeaders: []string{"Accept", "Content-Type"},
 		MaxAge:         maxCORSPreflightAgeSeconds,
 	}))
 
 	r.Get("/healthz", HealthzHandler)
 	r.Get("/books", BooksHandler(books))
+	r.Post("/books", CreateBookHandler(books))
+	r.Patch("/books/{id}", UpdateBookHandler(books))
+	r.Delete("/books/{id}", DeleteBookHandler(books))
 
 	return r
 }

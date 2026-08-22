@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"testing"
 
@@ -92,5 +93,101 @@ func TestListBooksRespectsLimitAndOffset(t *testing.T) {
 	}
 	if len(books) != 1 || books[0].Author != "Author B" {
 		t.Fatalf("books = %+v, want [Author B]", books)
+	}
+}
+
+func TestCreateBookInsertsAndAssignsID(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	created, err := s.CreateBook(context.Background(), store.Book{
+		Title:  "Dune",
+		Author: "Frank Herbert",
+		Year:   intPtr(1965),
+	})
+	if err != nil {
+		t.Fatalf("CreateBook() error = %v", err)
+	}
+	if created.ID == 0 {
+		t.Fatalf("CreateBook() did not assign an ID")
+	}
+
+	books, total, err := s.ListBooks(context.Background(), 10, 0)
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 1 || len(books) != 1 || books[0].Title != "Dune" {
+		t.Fatalf("books = %+v, want [Dune]", books)
+	}
+}
+
+func TestUpdateBookReplacesEveryColumn(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Old Title", "Old Author", nil, strPtr("Fiction"), nil)
+	seeded, _, err := s.ListBooks(context.Background(), 10, 0)
+	if err != nil || len(seeded) != 1 {
+		t.Fatalf("seeding failed: books=%+v err=%v", seeded, err)
+	}
+
+	updated, err := s.UpdateBook(context.Background(), store.Book{
+		ID:     seeded[0].ID,
+		Title:  "New Title",
+		Author: "New Author",
+		Year:   intPtr(2024),
+		// Genre and CoverURL left nil: update is a full replace, so this
+		// clears the genre the book was seeded with.
+	})
+	if err != nil {
+		t.Fatalf("UpdateBook() error = %v", err)
+	}
+	if updated.Title != "New Title" || updated.Author != "New Author" {
+		t.Fatalf("UpdateBook() = %+v, want New Title/New Author", updated)
+	}
+	if updated.Genre != nil {
+		t.Fatalf("UpdateBook() Genre = %v, want nil (full replace clears it)", *updated.Genre)
+	}
+}
+
+func TestUpdateBookReturnsNotFoundForUnknownID(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	_, err := s.UpdateBook(context.Background(), store.Book{ID: 999, Title: "X", Author: "Y"})
+	if !errors.Is(err, store.ErrBookNotFound) {
+		t.Fatalf("UpdateBook() error = %v, want ErrBookNotFound", err)
+	}
+}
+
+func TestDeleteBookRemovesRow(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	seedBook(t, db, "Title", "Author", nil, nil, nil)
+	seeded, _, err := s.ListBooks(context.Background(), 10, 0)
+	if err != nil || len(seeded) != 1 {
+		t.Fatalf("seeding failed: books=%+v err=%v", seeded, err)
+	}
+
+	if err := s.DeleteBook(context.Background(), seeded[0].ID); err != nil {
+		t.Fatalf("DeleteBook() error = %v", err)
+	}
+
+	_, total, err := s.ListBooks(context.Background(), 10, 0)
+	if err != nil {
+		t.Fatalf("ListBooks() error = %v", err)
+	}
+	if total != 0 {
+		t.Fatalf("total = %d, want 0 after delete", total)
+	}
+}
+
+func TestDeleteBookReturnsNotFoundForUnknownID(t *testing.T) {
+	db := testDB(t)
+	s := store.New(db)
+
+	if err := s.DeleteBook(context.Background(), 999); !errors.Is(err, store.ErrBookNotFound) {
+		t.Fatalf("DeleteBook() error = %v, want ErrBookNotFound", err)
 	}
 }
