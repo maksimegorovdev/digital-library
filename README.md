@@ -32,10 +32,11 @@ Run them individually with `make backend` or `make frontend`.
 
 ## Database
 
-The backend needs a local Postgres instance. Start one with Docker:
+The backend needs a local Postgres instance. Start one with Docker
+Compose:
 
 ```bash
-docker run --name digital-library-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=digital_library -p 5432:5432 -d postgres:16
+docker compose up -d
 ```
 
 Apply migrations (requires [golang-migrate](https://github.com/golang-migrate/migrate)):
