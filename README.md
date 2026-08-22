@@ -65,3 +65,9 @@ DATABASE_URL="postgres://postgres:postgres@localhost:5432/digital_library?sslmod
   the same database used for local dev or e2e tests)
 - Frontend: `NEXT_PUBLIC_API_URL` (default `http://localhost:8080`) — copy
   `frontend/.env.local.example` to `frontend/.env.local` to override
+
+Both services read environment variables from local `.env` files. The backend reads
+`backend/.env` and the frontend reads `frontend/.env.local`. Both files are gitignored
+to avoid committing local configuration. To get started, copy the provided example
+files: `cp backend/.env.example backend/.env` and `cp frontend/.env.local.example
+frontend/.env.local`, then adjust the values as needed for your local setup.
