@@ -103,6 +103,7 @@ export function BookFormDrawer({
               <FieldContent>
                 <Input
                   id="book-title"
+                  aria-invalid={!!errors.title}
                   {...register('title')}
                 />
                 <FieldError errors={[errors.title]} />
@@ -113,6 +114,7 @@ export function BookFormDrawer({
               <FieldContent>
                 <Input
                   id="book-author"
+                  aria-invalid={!!errors.author}
                   {...register('author')}
                 />
                 <FieldError errors={[errors.author]} />
@@ -124,6 +126,7 @@ export function BookFormDrawer({
                 <Input
                   id="book-year"
                   type="number"
+                  aria-invalid={!!errors.year}
                   {...register('year')}
                 />
                 <FieldError errors={[errors.year]} />
@@ -134,6 +137,7 @@ export function BookFormDrawer({
               <FieldContent>
                 <Input
                   id="book-genre"
+                  aria-invalid={!!errors.genre}
                   {...register('genre')}
                 />
                 <FieldError errors={[errors.genre]} />
@@ -146,6 +150,7 @@ export function BookFormDrawer({
               <FieldContent>
                 <Input
                   id="book-cover-url"
+                  aria-invalid={!!errors.coverUrl}
                   {...register('coverUrl')}
                 />
                 <FieldError errors={[errors.coverUrl]} />

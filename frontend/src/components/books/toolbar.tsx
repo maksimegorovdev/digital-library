@@ -26,6 +26,20 @@ export const BOOK_GENRE_OPTIONS = [
   'Другое',
 ] as const;
 
+// Sentinel value for the "clear filter" item. Base UI's Select treats an
+// empty-string item value as "no selection" for placeholder purposes, so a
+// real, non-empty sentinel is needed to make the clear option selectable.
+const ALL_GENRES_VALUE = '__all__';
+const ALL_GENRES_LABEL = 'Все жанры';
+
+// Base UI's <Select.Value> only resolves a selected item's display label
+// from this `items` list — without it, it falls back to rendering the raw
+// value, which would show the "__all__" sentinel verbatim in the trigger.
+const GENRE_SELECT_ITEMS = [
+  { value: ALL_GENRES_VALUE, label: ALL_GENRES_LABEL },
+  ...BOOK_GENRE_OPTIONS.map((option) => ({ value: option, label: option })),
+];
+
 export function BooksToolbar({ onAddBook }: { onAddBook: () => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,10 +68,12 @@ export function BooksToolbar({ onAddBook }: { onAddBook: () => void }) {
         className="max-w-xs"
       />
       <Select
-        value={genre || undefined}
+        items={GENRE_SELECT_ITEMS}
+        value={genre || ALL_GENRES_VALUE}
         onValueChange={(value) => {
-          setGenre(value ?? '');
-          updateParam('genre', value ?? '');
+          const nextGenre = value === ALL_GENRES_VALUE ? '' : (value ?? '');
+          setGenre(nextGenre);
+          updateParam('genre', nextGenre);
         }}
       >
         <SelectTrigger
@@ -67,6 +83,7 @@ export function BooksToolbar({ onAddBook }: { onAddBook: () => void }) {
           <SelectValue placeholder="Жанр" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value={ALL_GENRES_VALUE}>{ALL_GENRES_LABEL}</SelectItem>
           {BOOK_GENRE_OPTIONS.map((option) => (
             <SelectItem
               key={option}

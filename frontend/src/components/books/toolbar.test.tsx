@@ -47,6 +47,17 @@ describe('BooksToolbar', () => {
     );
   });
 
+  it('clears the URL genre param when "Все жанры" is selected', async () => {
+    searchParams = new URLSearchParams('genre=Детектив');
+    const user = userEvent.setup();
+    render(<BooksToolbar onAddBook={vi.fn()} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Жанр' }));
+    await user.click(await screen.findByRole('option', { name: 'Все жанры' }));
+
+    expect(replaceMock).toHaveBeenLastCalledWith('?', { scroll: false });
+  });
+
   it('initializes its controls from existing URL search params', () => {
     searchParams = new URLSearchParams('search=dune&genre=Фантастика');
 

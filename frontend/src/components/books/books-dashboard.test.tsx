@@ -78,4 +78,39 @@ describe('BooksDashboard', () => {
       expect(fetchSpy).toHaveBeenLastCalledWith({ page: 2, pageSize: 10 }),
     );
   });
+
+  it('resets to page 1 and refetches with the new pageSize when the page-size selector changes', async () => {
+    const fetchSpy = vi
+      .spyOn(api, 'fetchBooks')
+      .mockResolvedValue({ ok: true, books: [book()], total: 20 });
+
+    render(<BooksDashboard />);
+    await screen.findByText('Dune');
+
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+
+    // Move off page 1 first, so the assertion below actually exercises the
+    // "resets to page 1" behavior rather than trivially matching page 1.
+    await user.click(screen.getByRole('button', { name: 'Вперёд' }));
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({ page: 2, pageSize: 10 }),
+    );
+
+    // The page-size <Select> trigger has no aria-label (unlike the genre
+    // filter's), so per ARIA its accessible combobox name is empty rather
+    // than derived from its visible text — it can't be targeted by name.
+    // It's the second (and last) combobox in the DOM: genre filter first,
+    // page-size second.
+    const comboboxes = screen.getAllByRole('combobox');
+    const pageSizeCombobox = comboboxes[comboboxes.length - 1];
+    await user.click(pageSizeCombobox);
+    await user.click(
+      await screen.findByRole('option', { name: '20 на странице' }),
+    );
+
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({ page: 1, pageSize: 20 }),
+    );
+  });
 });
