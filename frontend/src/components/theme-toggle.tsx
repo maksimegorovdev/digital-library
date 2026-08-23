@@ -22,7 +22,7 @@ export function ThemeToggle() {
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Toggle theme"
+            aria-label="Переключить тему"
           >
             <Sun
               data-icon="inline-start"
@@ -39,14 +39,14 @@ export function ThemeToggle() {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => setTheme('light')}>
             <Sun data-icon="inline-start" />
-            Light
+            Светлая
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setTheme('dark')}>
             <Moon data-icon="inline-start" />
-            Dark
+            Тёмная
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setTheme('system')}>
-            System
+            Системная
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

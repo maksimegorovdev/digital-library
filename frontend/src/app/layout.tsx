@@ -19,18 +19,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'digital-library',
-  description: 'digital-library book catalog',
+  title: 'Библиотека Егорова Петра',
+  description: 'Каталог книг библиотеки Егорова Петра',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
-      lang="en"
+      lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full">
+      <body className="bg-sidebar min-h-full">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -43,14 +43,21 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
               } as CSSProperties
             }
           >
-            <AppSidebar />
+            <AppSidebar variant="inset" />
             {/*
               A plain div, not the `SidebarInset` primitive (which renders
               `<main>`): every route's own content already renders its own
               `<main>` landmark, and nesting two `<main>` elements is invalid
-              HTML (a `main` must have no `main` descendants).
+              HTML (a `main` must have no `main` descendants). The classes
+              below replicate SidebarInset's own "floating panel" look for
+              variant="inset" (see ui/sidebar.tsx) so the header and page
+              content share one continuous elevated surface instead of the
+              header sitting flush against the page background. Its own
+              background is `bg-background` (true black/white per theme,
+              same as dashboard-01's content pane), not `bg-card` — the
+              sidebar-toned body behind it is what provides the contrast.
             */}
-            <div className="bg-background relative flex w-full flex-1 flex-col">
+            <div className="bg-background ring-foreground/10 relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-none md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2">
               <SiteHeader />
               {children}
               <Toaster />

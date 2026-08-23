@@ -20,7 +20,7 @@ describe('BooksPage', () => {
 
     render(<BooksPage />);
 
-    expect(screen.getByText('Моя библиотека')).toBeInTheDocument();
+    expect(screen.getByText('Библиотека Егорова Петра')).toBeInTheDocument();
     expect(
       await screen.findByText('В библиотеке пока нет книг.'),
     ).toBeInTheDocument();
