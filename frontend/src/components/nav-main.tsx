@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
-import type { LucideIcon } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Library, type LucideIcon } from 'lucide-react';
 
 import {
   SidebarGroup,
@@ -15,7 +18,15 @@ export type NavMainItem = {
   icon: LucideIcon;
 };
 
+// Shared with SiteHeader, which shows the active item's title next to the
+// sidebar trigger instead of a static app name.
+export const navMainItems: NavMainItem[] = [
+  { title: 'Библиотека книг', url: '/', icon: Library },
+];
+
 export function NavMain({ items }: { items: NavMainItem[] }) {
+  const pathname = usePathname();
+
   return (
     <SidebarGroup>
       <SidebarGroupContent>
@@ -24,6 +35,7 @@ export function NavMain({ items }: { items: NavMainItem[] }) {
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 tooltip={item.title}
+                isActive={pathname === item.url}
                 render={<Link href={item.url} />}
               >
                 <item.icon />
