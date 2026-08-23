@@ -32,6 +32,7 @@ describe('BooksDashboard', () => {
       ok: true,
       books: [book()],
       total: 1,
+      pageSize: 10,
     });
 
     render(<BooksDashboard />);
@@ -45,6 +46,7 @@ describe('BooksDashboard', () => {
       ok: true,
       books: [],
       total: 0,
+      pageSize: 10,
     });
 
     render(<BooksDashboard />);
@@ -59,6 +61,7 @@ describe('BooksDashboard', () => {
       ok: true,
       books: [],
       total: 0,
+      pageSize: 10,
     });
 
     searchParams = new URLSearchParams('search=nonexistent');
@@ -70,6 +73,23 @@ describe('BooksDashboard', () => {
     expect(
       screen.queryByText('В библиотеке пока нет книг.'),
     ).not.toBeInTheDocument();
+  });
+
+  it('derives pagination from the effective page size, not the requested one, when the backend clamps the request', async () => {
+    vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 20,
+      pageSize: 5,
+    });
+
+    render(<BooksDashboard />);
+    await screen.findByText('Dune');
+
+    // Requested pageSize is the default (10), which would put this at
+    // "Страница 1 из 2" — the effective size of 5 puts it at 4 pages
+    // instead.
+    expect(screen.getByText('Страница 1 из 4')).toBeInTheDocument();
   });
 
   it('shows an error message when the fetch fails', async () => {
@@ -86,9 +106,12 @@ describe('BooksDashboard', () => {
   });
 
   it('refetches with the next page when "Вперёд" is activated', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 20 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 20,
+      pageSize: 10,
+    });
 
     render(<BooksDashboard />);
     await screen.findByText('Dune');
@@ -103,9 +126,12 @@ describe('BooksDashboard', () => {
   });
 
   it('resets to page 1 and refetches with the new pageSize when the page-size selector changes', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 20 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 20,
+      pageSize: 10,
+    });
 
     render(<BooksDashboard />);
     await screen.findByText('Dune');
@@ -138,9 +164,12 @@ describe('BooksDashboard', () => {
   });
 
   it('refetches the current page after a book is successfully saved', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 1,
+      pageSize: 10,
+    });
     vi.spyOn(api, 'createBook').mockResolvedValue({
       ok: true,
       data: book({ id: 2, title: 'New Book' }),
@@ -164,9 +193,12 @@ describe('BooksDashboard', () => {
   });
 
   it('includes the genre from the URL in the fetch immediately, without debouncing', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 1,
+      pageSize: 10,
+    });
 
     searchParams = new URLSearchParams('genre=Fantasy');
     const { rerender } = render(<BooksDashboard />);
@@ -182,9 +214,12 @@ describe('BooksDashboard', () => {
   });
 
   it('debounces the search term from the URL before it reaches the fetch', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 1,
+      pageSize: 10,
+    });
 
     const { rerender } = render(<BooksDashboard />);
     await waitFor(() =>
@@ -211,9 +246,12 @@ describe('BooksDashboard', () => {
   });
 
   it('resets to page 1 when the genre filter changes off of a later page', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 40 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 40,
+      pageSize: 10,
+    });
 
     const { rerender } = render(<BooksDashboard />);
     await screen.findByText('Dune');
@@ -245,9 +283,12 @@ describe('BooksDashboard', () => {
   });
 
   it('combines search and genre in the same fetch', async () => {
-    const fetchSpy = vi
-      .spyOn(api, 'fetchBooks')
-      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+    const fetchSpy = vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [book()],
+      total: 1,
+      pageSize: 10,
+    });
 
     searchParams = new URLSearchParams('search=dune&genre=Fantasy');
     const { rerender } = render(<BooksDashboard />);

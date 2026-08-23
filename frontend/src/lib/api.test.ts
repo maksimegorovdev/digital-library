@@ -145,6 +145,34 @@ describe('fetchBooks', () => {
     expect(url).not.toContain('search');
     expect(url).not.toContain('genre');
   });
+
+  it("returns the backend response body's effective page size", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ books: [], total: 0, limit: 10 }),
+      }),
+    );
+
+    const result = await fetchBooks({ page: 1, pageSize: 10 });
+
+    expect(result).toEqual({ ok: true, books: [], total: 0, pageSize: 10 });
+  });
+
+  it('returns an effective page size smaller than requested when the backend clamps it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ books: [], total: 0, limit: 200 }),
+      }),
+    );
+
+    const result = await fetchBooks({ page: 1, pageSize: 500 });
+
+    expect(result).toEqual({ ok: true, books: [], total: 0, pageSize: 200 });
+  });
 });
 
 describe('createBook', () => {

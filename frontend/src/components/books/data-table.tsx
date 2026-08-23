@@ -37,6 +37,7 @@ export function BooksDataTable({
   data,
   page,
   pageSize,
+  effectivePageSize = pageSize,
   total,
   onPageChange,
   onPageSizeChange,
@@ -45,13 +46,20 @@ export function BooksDataTable({
   columns: ColumnDef<Book, unknown>[];
   data: Book[];
   page: number;
+  // Drives the page-size <Select>'s displayed value — what the caller
+  // requested, always one of BOOKS_PAGE_SIZE_OPTIONS.
   pageSize: number;
+  // Drives pagination math (page count, current-page display) — the size
+  // the server actually used, which may differ from `pageSize` if the
+  // backend clamped the request. Defaults to `pageSize` when the caller
+  // has no better signal yet (e.g. before the first fetch resolves).
+  effectivePageSize?: number;
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   emptyMessage: string;
 }) {
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pageCount = Math.max(1, Math.ceil(total / effectivePageSize));
 
   const table = useReactTable({
     data,
@@ -60,7 +68,7 @@ export function BooksDataTable({
     manualPagination: true,
     pageCount,
     state: {
-      pagination: { pageIndex: page - 1, pageSize },
+      pagination: { pageIndex: page - 1, pageSize: effectivePageSize },
     },
   });
 

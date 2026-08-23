@@ -15,6 +15,7 @@ describe('BooksPage', () => {
       ok: true,
       books: [],
       total: 0,
+      pageSize: 10,
     });
 
     render(<BooksPage />);

@@ -55,7 +55,8 @@ export type BooksQuery = {
 };
 
 export type BooksResult =
-  { ok: true; books: Book[]; total: number } | { ok: false; error: string };
+  | { ok: true; books: Book[]; total: number; pageSize: number }
+  | { ok: false; error: string };
 
 /**
  * Fetches a page of books from the backend's /books endpoint and
@@ -63,6 +64,12 @@ export type BooksResult =
  * BooksResult the UI can render without throwing. `search`/`genre` on
  * BooksQuery are sent as query parameters when present; an empty or
  * absent value means "no filter" on this end of the seam.
+ *
+ * The result's `pageSize` is the backend's effective page size (its
+ * response `limit`), not necessarily the `pageSize` that was requested —
+ * the backend silently clamps oversized requests, and this is how a
+ * caller can detect that happened instead of the request/response page
+ * size silently drifting apart.
  */
 export async function fetchBooks(
   query: BooksQuery = { page: 1, pageSize: DEFAULT_BOOKS_PAGE_SIZE },
@@ -83,8 +90,17 @@ export async function fetchBooks(
     if (!res.ok) {
       return { ok: false, error: `backend responded with ${res.status}` };
     }
-    const body = (await res.json()) as { books: Book[]; total: number };
-    return { ok: true, books: body.books ?? [], total: body.total };
+    const body = (await res.json()) as {
+      books: Book[];
+      total: number;
+      limit: number;
+    };
+    return {
+      ok: true,
+      books: body.books ?? [],
+      total: body.total,
+      pageSize: body.limit,
+    };
   } catch (err) {
     return {
       ok: false,

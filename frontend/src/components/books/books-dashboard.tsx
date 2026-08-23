@@ -91,6 +91,12 @@ export function BooksDashboard() {
   const error = fetchState.status === 'error' ? fetchState.error : null;
   const books = fetchState.status === 'success' ? fetchState.books : [];
   const total = fetchState.status === 'success' ? fetchState.total : 0;
+  // The backend clamps oversized page-size requests; pagination math is
+  // derived from what it actually used, not from `pageSize` (the request),
+  // so a clamped request still renders correct "N of M" instead of a
+  // mismatch.
+  const effectivePageSize =
+    fetchState.status === 'success' ? fetchState.pageSize : pageSize;
   const emptyMessage =
     debouncedSearch || genre
       ? 'По вашему запросу ничего не найдено.'
@@ -124,6 +130,7 @@ export function BooksDashboard() {
           data={books}
           page={page}
           pageSize={pageSize}
+          effectivePageSize={effectivePageSize}
           total={total}
           onPageChange={setPage}
           onPageSizeChange={(size) => {
