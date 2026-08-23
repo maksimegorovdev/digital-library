@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+let searchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParams,
 }));
 
 import { BooksDashboard } from '@/components/books/books-dashboard';
@@ -22,6 +23,10 @@ function book(overrides: Partial<import('@/lib/api').Book> = {}) {
 }
 
 describe('BooksDashboard', () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams();
+  });
+
   it('shows a loading state, then renders fetched books', async () => {
     vi.spyOn(api, 'fetchBooks').mockResolvedValue({
       ok: true,
@@ -137,6 +142,106 @@ describe('BooksDashboard', () => {
 
     await waitFor(() =>
       expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsBeforeSave),
+    );
+  });
+
+  it('includes the genre from the URL in the fetch immediately, without debouncing', async () => {
+    const fetchSpy = vi
+      .spyOn(api, 'fetchBooks')
+      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+
+    searchParams = new URLSearchParams('genre=Fantasy');
+    const { rerender } = render(<BooksDashboard />);
+    rerender(<BooksDashboard />);
+
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 10,
+        genre: 'Fantasy',
+      }),
+    );
+  });
+
+  it('debounces the search term from the URL before it reaches the fetch', async () => {
+    const fetchSpy = vi
+      .spyOn(api, 'fetchBooks')
+      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+
+    const { rerender } = render(<BooksDashboard />);
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({ page: 1, pageSize: 10 }),
+    );
+    const callsBeforeSearch = fetchSpy.mock.calls.length;
+
+    searchParams = new URLSearchParams('search=dune');
+    rerender(<BooksDashboard />);
+
+    // Immediately after the URL changes, the debounce window hasn't
+    // elapsed yet, so no new fetch has fired.
+    expect(fetchSpy.mock.calls.length).toBe(callsBeforeSearch);
+
+    await waitFor(
+      () =>
+        expect(fetchSpy).toHaveBeenLastCalledWith({
+          page: 1,
+          pageSize: 10,
+          search: 'dune',
+        }),
+      { timeout: 1000 },
+    );
+  });
+
+  it('resets to page 1 when the genre filter changes off of a later page', async () => {
+    const fetchSpy = vi
+      .spyOn(api, 'fetchBooks')
+      .mockResolvedValue({ ok: true, books: [book()], total: 40 });
+
+    const { rerender } = render(<BooksDashboard />);
+    await screen.findByText('Dune');
+
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Вперёд' }));
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({ page: 2, pageSize: 10 }),
+    );
+
+    searchParams = new URLSearchParams('genre=Fantasy');
+    rerender(<BooksDashboard />);
+
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 10,
+        genre: 'Fantasy',
+      }),
+    );
+    // The reset lands directly on the filtered fetch — no intermediate
+    // request for the stale page/filter combination.
+    expect(fetchSpy).not.toHaveBeenCalledWith({
+      page: 2,
+      pageSize: 10,
+      genre: 'Fantasy',
+    });
+  });
+
+  it('combines search and genre in the same fetch', async () => {
+    const fetchSpy = vi
+      .spyOn(api, 'fetchBooks')
+      .mockResolvedValue({ ok: true, books: [book()], total: 1 });
+
+    searchParams = new URLSearchParams('search=dune&genre=Fantasy');
+    const { rerender } = render(<BooksDashboard />);
+    rerender(<BooksDashboard />);
+
+    await waitFor(() =>
+      expect(fetchSpy).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 10,
+        search: 'dune',
+        genre: 'Fantasy',
+      }),
     );
   });
 });

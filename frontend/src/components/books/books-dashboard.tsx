@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { BookFormDrawer } from '@/components/books/book-form-drawer';
@@ -9,45 +10,105 @@ import { DeleteBookDrawer } from '@/components/books/delete-book-drawer';
 import { BooksToolbar } from '@/components/books/toolbar';
 import { DEFAULT_BOOKS_PAGE_SIZE, fetchBooks, type Book } from '@/lib/api';
 
+// How long a keystroke in the search box waits before it affects the
+// fetch — long enough to not fire a request per keystroke, short enough
+// to feel responsive. Genre changes are a discrete selection and skip
+// this delay entirely.
+const SEARCH_DEBOUNCE_MS = 300;
+
+type Filter = { search: string; genre: string };
+
 type FetchSnapshot =
-  | { status: 'loading'; page: number; pageSize: number }
-  | {
-      status: 'success';
-      page: number;
-      pageSize: number;
-      books: Book[];
-      total: number;
-    }
-  | { status: 'error'; page: number; pageSize: number; error: string };
+  | ({ status: 'loading' } & Filter & { page: number; pageSize: number })
+  | ({ status: 'success' } & Filter & {
+        page: number;
+        pageSize: number;
+        books: Book[];
+        total: number;
+      })
+  | ({ status: 'error' } & Filter & {
+        page: number;
+        pageSize: number;
+        error: string;
+      });
 
 export function BooksDashboard() {
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') ?? '';
+  const genre = searchParams.get('genre') ?? '';
+
+  // The search box's URL param updates on every keystroke; debounce it
+  // here so a burst of typing doesn't fire a fetch per character. Genre
+  // is a discrete selection and is used as-is.
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSearch(search),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_BOOKS_PAGE_SIZE);
+
+  // Reset to page 1 whenever the effective filter changes, following
+  // React's "adjust state during render" pattern so the reset lands in
+  // the same render as the filter change instead of firing an extra,
+  // now-stale fetch first. See https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [appliedFilter, setAppliedFilter] = useState<Filter>({
+    search: debouncedSearch,
+    genre,
+  });
+  if (
+    appliedFilter.search !== debouncedSearch ||
+    appliedFilter.genre !== genre
+  ) {
+    setAppliedFilter({ search: debouncedSearch, genre });
+    setPage(1);
+  }
+
   const [snapshot, setSnapshot] = useState<FetchSnapshot>({
     status: 'loading',
     page: 1,
     pageSize: DEFAULT_BOOKS_PAGE_SIZE,
+    search: '',
+    genre: '',
   });
   const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
   const [deletingBook, setDeletingBook] = useState<Book | null>(null);
   // Bumped after a successful create/update/delete to re-run the fetch
-  // below without changing the current page or pageSize.
+  // below without changing the current page, pageSize, or filter.
   const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
-    fetchBooks({ page, pageSize }).then((result) => {
+    fetchBooks({
+      page,
+      pageSize,
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      ...(genre ? { genre } : {}),
+    }).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
-        setSnapshot({ status: 'error', page, pageSize, error: result.error });
+        setSnapshot({
+          status: 'error',
+          page,
+          pageSize,
+          search: debouncedSearch,
+          genre,
+          error: result.error,
+        });
         return;
       }
       setSnapshot({
         status: 'success',
         page,
         pageSize,
+        search: debouncedSearch,
+        genre,
         books: result.books,
         total: result.total,
       });
@@ -56,13 +117,18 @@ export function BooksDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, refreshToken]);
+  }, [page, pageSize, debouncedSearch, genre, refreshToken]);
 
   const refresh = () => setRefreshToken((token) => token + 1);
 
   // The fetch snapshot is only trusted once it matches the currently
-  // requested page/pageSize — otherwise we're between requests (loading).
-  const isCurrent = snapshot.page === page && snapshot.pageSize === pageSize;
+  // requested page/pageSize/filter — otherwise we're between requests
+  // (loading) or looking at a response for a filter that no longer applies.
+  const isCurrent =
+    snapshot.page === page &&
+    snapshot.pageSize === pageSize &&
+    snapshot.search === debouncedSearch &&
+    snapshot.genre === genre;
   const loading = !isCurrent || snapshot.status === 'loading';
   const error =
     isCurrent && snapshot.status === 'error' ? snapshot.error : null;

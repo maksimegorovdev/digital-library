@@ -22,4 +22,33 @@ test.describe('books list', () => {
     // Check for pagination controls
     await expect(page.getByRole('button', { name: 'Вперёд' })).toBeVisible();
   });
+
+  test('search filter round-trips through the URL and survives a reload', async ({
+    page,
+  }) => {
+    await page.goto('/books');
+    await expect(
+      page.getByRole('cell', { name: 'Dune', exact: true }),
+    ).toBeVisible();
+
+    await page.getByPlaceholder('Поиск по названию или автору').fill('Dune');
+
+    await expect(page).toHaveURL(/search=Dune/);
+    await expect(
+      page.getByRole('cell', { name: 'Dune', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'The Hobbit', exact: true }),
+    ).not.toBeVisible();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/search=Dune/);
+    await expect(
+      page.getByRole('cell', { name: 'Dune', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'The Hobbit', exact: true }),
+    ).not.toBeVisible();
+  });
 });

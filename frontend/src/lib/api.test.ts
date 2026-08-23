@@ -113,7 +113,7 @@ describe('fetchBooks', () => {
     );
   });
 
-  it('never includes search or genre in the request, even when provided', async () => {
+  it('includes search and genre as query parameters when provided', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ books: [], total: 0 }),
@@ -126,6 +126,20 @@ describe('fetchBooks', () => {
       search: 'dune',
       genre: 'Sci-Fi',
     });
+
+    const [url] = fetchMock.mock.calls[0] as [string, unknown];
+    expect(url).toContain('search=dune');
+    expect(url).toContain(`genre=${encodeURIComponent('Sci-Fi')}`);
+  });
+
+  it('omits search and genre when they are empty strings', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ books: [], total: 0 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchBooks({ page: 1, pageSize: 10, search: '', genre: '' });
 
     const [url] = fetchMock.mock.calls[0] as [string, unknown];
     expect(url).not.toContain('search');

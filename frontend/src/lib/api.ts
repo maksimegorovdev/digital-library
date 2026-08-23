@@ -61,19 +61,25 @@ export type BooksResult =
  * Fetches a page of books from the backend's /books endpoint and
  * normalizes both network failures and non-200 responses into a
  * BooksResult the UI can render without throwing. `search`/`genre` on
- * BooksQuery are accepted for forward-compatibility with server-side
- * filtering but are intentionally not sent yet.
+ * BooksQuery are sent as query parameters when present; an empty or
+ * absent value means "no filter" on this end of the seam.
  */
 export async function fetchBooks(
   query: BooksQuery = { page: 1, pageSize: DEFAULT_BOOKS_PAGE_SIZE },
 ): Promise<BooksResult> {
-  const { page, pageSize } = query;
+  const { page, pageSize, search, genre } = query;
   const offset = (page - 1) * pageSize;
+  const params = new URLSearchParams({
+    limit: String(pageSize),
+    offset: String(offset),
+  });
+  if (search) params.set('search', search);
+  if (genre) params.set('genre', genre);
   try {
-    const res = await fetch(
-      `${getApiBaseUrl()}/books?limit=${pageSize}&offset=${offset}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(5000) },
-    );
+    const res = await fetch(`${getApiBaseUrl()}/books?${params.toString()}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
     if (!res.ok) {
       return { ok: false, error: `backend responded with ${res.status}` };
     }

@@ -13,8 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-// Placeholder options — not sourced from the backend. A follow-up change
-// wiring real server-side filtering should replace this with a live list.
+// Fixed list, not sourced from the backend — intentional for now (see
+// the search/genre filtering spec's Out of Scope section).
 export const BOOK_GENRE_OPTIONS = [
   'Фантастика',
   'Фэнтези',
