@@ -8,6 +8,7 @@ import { createBooksColumns } from '@/components/books/columns';
 import { BooksDataTable } from '@/components/books/data-table';
 import { DeleteBookDrawer } from '@/components/books/delete-book-drawer';
 import { BooksToolbar } from '@/components/books/toolbar';
+import { useFreshFetch } from '@/hooks/use-fresh-fetch';
 import { DEFAULT_BOOKS_PAGE_SIZE, fetchBooks, type Book } from '@/lib/api';
 
 // How long a keystroke in the search box waits before it affects the
@@ -18,19 +19,19 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 type Filter = { search: string; genre: string };
 
-type FetchSnapshot =
-  | ({ status: 'loading' } & Filter & { page: number; pageSize: number })
-  | ({ status: 'success' } & Filter & {
-        page: number;
-        pageSize: number;
-        books: Book[];
-        total: number;
-      })
-  | ({ status: 'error' } & Filter & {
-        page: number;
-        pageSize: number;
-        error: string;
-      });
+function fetchBooksPage(
+  page: number,
+  pageSize: number,
+  search: string,
+  genre: string,
+) {
+  return fetchBooks({
+    page,
+    pageSize,
+    ...(search ? { search } : {}),
+    ...(genre ? { genre } : {}),
+  });
+}
 
 export function BooksDashboard() {
   const searchParams = useSearchParams();
@@ -68,13 +69,6 @@ export function BooksDashboard() {
     setPage(1);
   }
 
-  const [snapshot, setSnapshot] = useState<FetchSnapshot>({
-    status: 'loading',
-    page: 1,
-    pageSize: DEFAULT_BOOKS_PAGE_SIZE,
-    search: '',
-    genre: '',
-  });
   const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
   const [deletingBook, setDeletingBook] = useState<Book | null>(null);
@@ -82,59 +76,21 @@ export function BooksDashboard() {
   // below without changing the current page, pageSize, or filter.
   const [refreshToken, setRefreshToken] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchBooks({
-      page,
-      pageSize,
-      ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(genre ? { genre } : {}),
-    }).then((result) => {
-      if (cancelled) return;
-      if (!result.ok) {
-        setSnapshot({
-          status: 'error',
-          page,
-          pageSize,
-          search: debouncedSearch,
-          genre,
-          error: result.error,
-        });
-        return;
-      }
-      setSnapshot({
-        status: 'success',
-        page,
-        pageSize,
-        search: debouncedSearch,
-        genre,
-        books: result.books,
-        total: result.total,
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [page, pageSize, debouncedSearch, genre, refreshToken]);
+  // refreshToken bumps after a save/delete to force a refetch of the
+  // current page/filter — it isn't part of the identifying args, so a
+  // refresh updates the table in place instead of dropping to loading.
+  const fetchState = useFreshFetch(
+    fetchBooksPage,
+    [page, pageSize, debouncedSearch, genre] as const,
+    [refreshToken],
+  );
 
   const refresh = () => setRefreshToken((token) => token + 1);
 
-  // The fetch snapshot is only trusted once it matches the currently
-  // requested page/pageSize/filter — otherwise we're between requests
-  // (loading) or looking at a response for a filter that no longer applies.
-  const isCurrent =
-    snapshot.page === page &&
-    snapshot.pageSize === pageSize &&
-    snapshot.search === debouncedSearch &&
-    snapshot.genre === genre;
-  const loading = !isCurrent || snapshot.status === 'loading';
-  const error =
-    isCurrent && snapshot.status === 'error' ? snapshot.error : null;
-  const books =
-    isCurrent && snapshot.status === 'success' ? snapshot.books : [];
-  const total = isCurrent && snapshot.status === 'success' ? snapshot.total : 0;
+  const loading = fetchState.status === 'loading';
+  const error = fetchState.status === 'error' ? fetchState.error : null;
+  const books = fetchState.status === 'success' ? fetchState.books : [];
+  const total = fetchState.status === 'success' ? fetchState.total : 0;
   const emptyMessage =
     debouncedSearch || genre
       ? 'По вашему запросу ничего не найдено.'
