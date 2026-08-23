@@ -9,8 +9,12 @@ test.describe('books list', () => {
       page.getByRole('heading', { name: 'Моя библиотека' }),
     ).toBeVisible();
 
-    // Check for table rows with seeded book data
-    await expect(page.getByRole('cell', { name: 'Dune' })).toBeVisible();
+    // Check for table rows with seeded book data. exact: true avoids
+    // matching the cover image's alt text ("Обложка книги «Dune»"),
+    // which also contains "Dune" as a substring.
+    await expect(
+      page.getByRole('cell', { name: 'Dune', exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole('cell', { name: 'Frank Herbert' }),
     ).toBeVisible();
