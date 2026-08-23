@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'digital-library',
-  description: 'digital-library backend status',
+  description: 'digital-library book catalog',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 
 const navMainItems: NavMainItem[] = [
-  { title: 'Библиотека книг', url: '/books', icon: Library },
+  { title: 'Библиотека книг', url: '/', icon: Library },
 ];
 
 export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
@@ -29,7 +29,7 @@ export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={<Link href="/books" />}
+              render={<Link href="/" />}
             >
               <BookOpen className="size-5" />
               <span className="text-sm font-semibold">digital-library</span>
