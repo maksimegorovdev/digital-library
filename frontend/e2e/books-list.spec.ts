@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test.describe('books list', () => {
   test('renders seeded books from the backend', async ({ page }) => {
-    await page.goto('/books');
+    await page.goto('/');
 
     // Check for page title
     await expect(
@@ -30,7 +30,7 @@ test.describe('books list', () => {
   test('search filter round-trips through the URL and survives a reload', async ({
     page,
   }) => {
-    await page.goto('/books');
+    await page.goto('/');
     await expect(
       page.getByRole('cell', { name: 'Dune', exact: true }),
     ).toBeVisible();
@@ -54,5 +54,23 @@ test.describe('books list', () => {
     await expect(
       page.getByRole('cell', { name: 'The Hobbit', exact: true }),
     ).not.toBeVisible();
+  });
+
+  test('sidebar shows exactly one nav entry, "Библиотека книг"', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    const sidebar = page.locator('[data-slot="sidebar"]');
+
+    // Name-scoped: the one entry the spec calls for is present.
+    await expect(
+      sidebar.getByRole('link', { name: 'Библиотека книг' }),
+    ).toHaveCount(1);
+
+    // Count-scoped: catches a second link regardless of its accessible
+    // name (e.g. a brand/logo link), which the name-scoped assertion
+    // above would miss.
+    await expect(sidebar.getByRole('link')).toHaveCount(1);
   });
 });

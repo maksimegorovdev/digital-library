@@ -6,7 +6,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import BooksPage from '@/app/books/page';
+import BooksPage from '@/app/page';
 import * as api from '@/lib/api';
 
 describe('BooksPage', () => {
