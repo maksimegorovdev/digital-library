@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -23,24 +23,44 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { GenreSelect } from '@/components/books/genre-select';
 import { createBook, updateBook, type Book, type BookInput } from '@/lib/api';
+import { BOOK_GENRE_OPTIONS } from '@/lib/genres';
+
+// Sentinel for "no genre selected" — see GenreSelect's doc comment for why
+// a non-empty sentinel is needed here.
+const NO_GENRE_VALUE = '__none__';
+const NO_GENRE_LABEL = 'Без жанра';
 
 const bookFormSchema = z.object({
   title: z.string().min(1, 'Укажите название'),
   author: z.string().min(1, 'Укажите автора'),
   year: z.string(),
-  genre: z.string(),
+  genre: z.union([z.literal(''), z.enum(BOOK_GENRE_OPTIONS)]),
   coverUrl: z.string(),
 });
 
 type BookFormValues = z.infer<typeof bookFormSchema>;
+
+// A book's stored genre may predate the fixed vocabulary (or have been
+// written some other way), so it isn't guaranteed to be one of
+// BOOK_GENRE_OPTIONS. Such a value is treated as "no genre selected" rather
+// than rejected, since the form's select can only offer the fixed list.
+function isBookGenreOption(
+  value: string | null | undefined,
+): value is (typeof BOOK_GENRE_OPTIONS)[number] {
+  return (
+    typeof value === 'string' &&
+    (BOOK_GENRE_OPTIONS as readonly string[]).includes(value)
+  );
+}
 
 function toDefaultValues(book?: Book): BookFormValues {
   return {
     title: book?.title ?? '',
     author: book?.author ?? '',
     year: book?.year ? String(book.year) : '',
-    genre: book?.genre ?? '',
+    genre: isBookGenreOption(book?.genre) ? book.genre : '',
     coverUrl: book?.coverUrl ?? '',
   };
 }
@@ -58,6 +78,7 @@ export function BookFormDrawer({
 }) {
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<BookFormValues>({
@@ -146,10 +167,20 @@ export function BookFormDrawer({
             <Field data-invalid={!!errors.genre}>
               <FieldLabel htmlFor="book-genre">Жанр</FieldLabel>
               <FieldContent>
-                <Input
-                  id="book-genre"
-                  aria-invalid={!!errors.genre}
-                  {...register('genre')}
+                <Controller
+                  control={control}
+                  name="genre"
+                  render={({ field }) => (
+                    <GenreSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      sentinelValue={NO_GENRE_VALUE}
+                      sentinelLabel={NO_GENRE_LABEL}
+                      ariaLabel="Жанр"
+                      id="book-genre"
+                      ariaInvalid={!!errors.genre}
+                    />
+                  )}
                 />
                 <FieldError errors={[errors.genre]} />
               </FieldContent>

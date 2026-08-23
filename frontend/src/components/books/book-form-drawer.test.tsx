@@ -30,7 +30,7 @@ describe('BookFormDrawer', () => {
           title: 'Dune',
           author: 'Frank Herbert',
           year: 1965,
-          genre: 'Sci-Fi',
+          genre: 'Фантастика',
           coverUrl: null,
         }}
       />,
@@ -38,6 +38,27 @@ describe('BookFormDrawer', () => {
 
     expect(screen.getByText('Изменить книгу')).toBeInTheDocument();
     expect(screen.getByLabelText('Название')).toHaveValue('Dune');
+    expect(screen.getByLabelText('Жанр')).toHaveTextContent('Фантастика');
+  });
+
+  it('falls back to "no genre selected" when the book\'s genre is outside the fixed list', () => {
+    render(
+      <BookFormDrawer
+        open
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+        book={{
+          id: 1,
+          title: 'Dune',
+          author: 'Frank Herbert',
+          year: 1965,
+          genre: 'Sci-Fi',
+          coverUrl: null,
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText('Жанр')).toHaveTextContent('Без жанра');
   });
 
   it('blocks submission and shows a validation error when title is empty', async () => {
@@ -96,6 +117,40 @@ describe('BookFormDrawer', () => {
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSaved).toHaveBeenCalled();
+  });
+
+  it('lets the user pick a genre from the fixed list and submits it', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, 'createBook').mockResolvedValue({
+      ok: true,
+      data: {
+        id: 1,
+        title: 'Dune',
+        author: 'Frank Herbert',
+        year: null,
+        genre: 'Фантастика',
+        coverUrl: null,
+      },
+    });
+    render(
+      <BookFormDrawer
+        open
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Название'), 'Dune');
+    await user.type(screen.getByLabelText('Автор'), 'Frank Herbert');
+    await user.click(screen.getByLabelText('Жанр'));
+    await user.click(await screen.findByRole('option', { name: 'Фантастика' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(() =>
+      expect(api.createBook).toHaveBeenCalledWith(
+        expect.objectContaining({ genre: 'Фантастика' }),
+      ),
+    );
   });
 
   it('keeps the drawer open and does not notify the caller when the save fails', async () => {

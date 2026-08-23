@@ -135,6 +135,10 @@ export function BooksDashboard() {
   const books =
     isCurrent && snapshot.status === 'success' ? snapshot.books : [];
   const total = isCurrent && snapshot.status === 'success' ? snapshot.total : 0;
+  const emptyMessage =
+    debouncedSearch || genre
+      ? 'По вашему запросу ничего не найдено.'
+      : 'В библиотеке пока нет книг.';
 
   const columns = createBooksColumns({
     onEdit: (book) => {
@@ -170,6 +174,7 @@ export function BooksDashboard() {
             setPageSize(size);
             setPage(1);
           }}
+          emptyMessage={emptyMessage}
         />
       )}
       <BookFormDrawer

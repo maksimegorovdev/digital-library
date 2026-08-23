@@ -54,6 +54,24 @@ describe('BooksDashboard', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a distinct no-results message when a filter is active and matches nothing', async () => {
+    vi.spyOn(api, 'fetchBooks').mockResolvedValue({
+      ok: true,
+      books: [],
+      total: 0,
+    });
+
+    searchParams = new URLSearchParams('search=nonexistent');
+    render(<BooksDashboard />);
+
+    expect(
+      await screen.findByText('По вашему запросу ничего не найдено.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('В библиотеке пока нет книг.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows an error message when the fetch fails', async () => {
     vi.spyOn(api, 'fetchBooks').mockResolvedValue({
       ok: false,

@@ -33,6 +33,7 @@ export function BooksDataTable<TData>({
   total,
   onPageChange,
   onPageSizeChange,
+  emptyMessage = 'В библиотеке пока нет книг.',
 }: {
   columns: ColumnDef<TData, unknown>[];
   data: TData[];
@@ -41,6 +42,7 @@ export function BooksDataTable<TData>({
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  emptyMessage?: string;
 }) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -95,7 +97,7 @@ export function BooksDataTable<TData>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  В библиотеке пока нет книг.
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}

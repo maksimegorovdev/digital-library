@@ -5,40 +5,12 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { GenreSelect } from '@/components/books/genre-select';
 
-// Fixed list, not sourced from the backend — intentional for now (see
-// the search/genre filtering spec's Out of Scope section).
-export const BOOK_GENRE_OPTIONS = [
-  'Фантастика',
-  'Фэнтези',
-  'Детектив',
-  'Роман',
-  'Нон-фикшн',
-  'Биография',
-  'Поэзия',
-  'Другое',
-] as const;
-
-// Sentinel value for the "clear filter" item. Base UI's Select treats an
-// empty-string item value as "no selection" for placeholder purposes, so a
-// real, non-empty sentinel is needed to make the clear option selectable.
+// Sentinel value for the "clear filter" item — see GenreSelect's doc
+// comment for why a non-empty sentinel is needed here.
 const ALL_GENRES_VALUE = '__all__';
 const ALL_GENRES_LABEL = 'Все жанры';
-
-// Base UI's <Select.Value> only resolves a selected item's display label
-// from this `items` list — without it, it falls back to rendering the raw
-// value, which would show the "__all__" sentinel verbatim in the trigger.
-const GENRE_SELECT_ITEMS = [
-  { value: ALL_GENRES_VALUE, label: ALL_GENRES_LABEL },
-  ...BOOK_GENRE_OPTIONS.map((option) => ({ value: option, label: option })),
-];
 
 export function BooksToolbar({ onAddBook }: { onAddBook: () => void }) {
   const router = useRouter();
@@ -67,33 +39,17 @@ export function BooksToolbar({ onAddBook }: { onAddBook: () => void }) {
         }}
         className="max-w-xs"
       />
-      <Select
-        items={GENRE_SELECT_ITEMS}
-        value={genre || ALL_GENRES_VALUE}
-        onValueChange={(value) => {
-          const nextGenre = value === ALL_GENRES_VALUE ? '' : (value ?? '');
+      <GenreSelect
+        value={genre}
+        onValueChange={(nextGenre) => {
           setGenre(nextGenre);
           updateParam('genre', nextGenre);
         }}
-      >
-        <SelectTrigger
-          className="w-40"
-          aria-label="Жанр"
-        >
-          <SelectValue placeholder="Жанр" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_GENRES_VALUE}>{ALL_GENRES_LABEL}</SelectItem>
-          {BOOK_GENRE_OPTIONS.map((option) => (
-            <SelectItem
-              key={option}
-              value={option}
-            >
-              {option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        sentinelValue={ALL_GENRES_VALUE}
+        sentinelLabel={ALL_GENRES_LABEL}
+        ariaLabel="Жанр"
+        className="w-40"
+      />
       <Button
         className="ml-auto"
         onClick={onAddBook}
