@@ -23,9 +23,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BOOKS_PAGE_SIZE_OPTIONS } from '@/lib/api';
+import { BOOKS_PAGE_SIZE_OPTIONS, type Book } from '@/lib/api';
 
-export function BooksDataTable<TData>({
+// Books-specific by design: this is the books catalog's only table today,
+// so its empty-state copy and page-size options are Book/books-module
+// concerns rather than caller-supplied inputs. If a second table needs
+// this shell, generalize by taking `emptyMessage` and the page-size
+// options as required props instead of reintroducing a generic row type.
+export function BooksDataTable({
   columns,
   data,
   page,
@@ -33,16 +38,16 @@ export function BooksDataTable<TData>({
   total,
   onPageChange,
   onPageSizeChange,
-  emptyMessage = 'В библиотеке пока нет книг.',
+  emptyMessage,
 }: {
-  columns: ColumnDef<TData, unknown>[];
-  data: TData[];
+  columns: ColumnDef<Book, unknown>[];
+  data: Book[];
   page: number;
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  emptyMessage?: string;
+  emptyMessage: string;
 }) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
