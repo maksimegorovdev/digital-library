@@ -26,10 +26,12 @@ import {
 import { BOOKS_PAGE_SIZE_OPTIONS, type Book } from '@/lib/api';
 
 // Books-specific by design: this is the books catalog's only table today,
-// so its empty-state copy and page-size options are Book/books-module
-// concerns rather than caller-supplied inputs. If a second table needs
-// this shell, generalize by taking `emptyMessage` and the page-size
-// options as required props instead of reintroducing a generic row type.
+// so it's typed to Book directly rather than a generic row, and its
+// page-size options come from the books module's own
+// BOOKS_PAGE_SIZE_OPTIONS rather than a caller-supplied input (unlike
+// `emptyMessage`, which the caller already supplies). If a second table
+// needs this shell, generalize by taking the page-size options as a
+// required prop too, instead of reintroducing a generic row type.
 export function BooksDataTable({
   columns,
   data,
