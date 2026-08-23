@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { BookOpen, Library } from 'lucide-react';
+import { Library } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
 import { NavMain, type NavMainItem } from '@/components/nav-main';
@@ -8,10 +7,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
 const navMainItems: NavMainItem[] = [
@@ -24,19 +19,6 @@ export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
       collapsible="offcanvas"
       {...props}
     >
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={<Link href="/" />}
-            >
-              <BookOpen className="size-5" />
-              <span className="text-sm font-semibold">digital-library</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />
       </SidebarContent>

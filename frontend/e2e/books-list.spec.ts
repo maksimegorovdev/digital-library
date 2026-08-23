@@ -61,8 +61,16 @@ test.describe('books list', () => {
   }) => {
     await page.goto('/');
 
+    const sidebar = page.locator('[data-slot="sidebar"]');
+
+    // Name-scoped: the one entry the spec calls for is present.
     await expect(
-      page.getByRole('link', { name: 'Библиотека книг' }),
+      sidebar.getByRole('link', { name: 'Библиотека книг' }),
     ).toHaveCount(1);
+
+    // Count-scoped: catches a second link regardless of its accessible
+    // name (e.g. a brand/logo link), which the name-scoped assertion
+    // above would miss.
+    await expect(sidebar.getByRole('link')).toHaveCount(1);
   });
 });
