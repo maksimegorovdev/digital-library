@@ -29,7 +29,7 @@ export function createBooksColumns({
         const coverUrl = row.original.coverUrl;
         if (!coverUrl) {
           return (
-            <div className="bg-muted text-muted-foreground flex h-16 w-11 items-center justify-center rounded text-[10px]">
+            <div className="bg-muted text-muted-foreground flex h-16 w-11 items-center justify-center rounded-md text-xs">
               Нет
             </div>
           );
@@ -40,7 +40,7 @@ export function createBooksColumns({
             alt={`Обложка книги «${row.original.title}»`}
             width={44}
             height={64}
-            className="h-16 w-11 rounded object-cover"
+            className="h-16 w-11 rounded-md object-cover"
           />
         );
       },
