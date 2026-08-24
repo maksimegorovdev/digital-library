@@ -2,19 +2,19 @@
 
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { deleteBook, type Book } from '@/lib/api';
 
-export function DeleteBookDrawer({
+export function DeleteBookDialog({
   open,
   onOpenChange,
   book,
@@ -40,27 +40,27 @@ export function DeleteBookDrawer({
   }
 
   return (
-    <Drawer
+    <AlertDialog
       open={open}
       onOpenChange={onOpenChange}
     >
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Удалить книгу?</DrawerTitle>
-          <DrawerDescription>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Удалить книгу?</AlertDialogTitle>
+          <AlertDialogDescription>
             {book ? `Вы уверены, что хотите удалить «${book.title}»?` : ''}
-          </DrawerDescription>
-        </DrawerHeader>
-        <DrawerFooter>
-          <Button
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction
             variant="destructive"
             onClick={handleConfirm}
           >
             Удалить
-          </Button>
-          <DrawerClose render={<Button variant="outline">Отмена</Button>} />
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          </AlertDialogAction>
+          <AlertDialogCancel>Отмена</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
