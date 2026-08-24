@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { BookFormDrawer } from '@/components/books/book-form-drawer';
 import { createBooksColumns } from '@/components/books/columns';
 import { BooksDataTable } from '@/components/books/data-table';
-import { DeleteBookDrawer } from '@/components/books/delete-book-drawer';
+import { DeleteBookDialog } from '@/components/books/delete-book-dialog';
 import { BooksToolbar } from '@/components/books/toolbar';
 import { useFreshFetch } from '@/hooks/use-fresh-fetch';
 import { DEFAULT_BOOKS_PAGE_SIZE, fetchBooks, type Book } from '@/lib/api';
@@ -146,7 +146,7 @@ export function BooksDashboard() {
         book={editingBook}
         onSaved={refresh}
       />
-      <DeleteBookDrawer
+      <DeleteBookDialog
         open={deletingBook !== null}
         onOpenChange={(open) => {
           if (!open) setDeletingBook(null);

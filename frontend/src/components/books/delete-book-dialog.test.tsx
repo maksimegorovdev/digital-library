@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { DeleteBookDrawer } from '@/components/books/delete-book-drawer';
+import { DeleteBookDialog } from '@/components/books/delete-book-dialog';
 import * as api from '@/lib/api';
 
 const book = {
@@ -14,10 +14,10 @@ const book = {
   coverUrl: null,
 };
 
-describe('DeleteBookDrawer', () => {
+describe('DeleteBookDialog', () => {
   it('asks for confirmation naming the book', () => {
     render(
-      <DeleteBookDrawer
+      <DeleteBookDialog
         open
         onOpenChange={vi.fn()}
         onDeleted={vi.fn()}
@@ -25,6 +25,9 @@ describe('DeleteBookDrawer', () => {
       />,
     );
 
+    expect(
+      screen.getByRole('alertdialog', { name: 'Удалить книгу?' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('Вы уверены, что хотите удалить «Dune»?'),
     ).toBeInTheDocument();
@@ -40,7 +43,7 @@ describe('DeleteBookDrawer', () => {
     });
 
     render(
-      <DeleteBookDrawer
+      <DeleteBookDialog
         open
         onOpenChange={onOpenChange}
         onDeleted={onDeleted}
@@ -55,7 +58,7 @@ describe('DeleteBookDrawer', () => {
     expect(onDeleted).toHaveBeenCalled();
   });
 
-  it('keeps the drawer open and does not notify the caller when deletion fails', async () => {
+  it('keeps the dialog open and does not notify the caller when deletion fails', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     const onDeleted = vi.fn();
@@ -65,7 +68,7 @@ describe('DeleteBookDrawer', () => {
     });
 
     render(
-      <DeleteBookDrawer
+      <DeleteBookDialog
         open
         onOpenChange={onOpenChange}
         onDeleted={onDeleted}
@@ -78,5 +81,32 @@ describe('DeleteBookDrawer', () => {
     await waitFor(() => expect(api.deleteBook).toHaveBeenCalledWith(1));
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(onDeleted).not.toHaveBeenCalled();
+  });
+
+  it('is not dismissed by an outside click', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+
+    render(
+      <DeleteBookDialog
+        open
+        onOpenChange={onOpenChange}
+        onDeleted={vi.fn()}
+        book={book}
+      />,
+    );
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+
+    // Click the overlay behind the dialog — a plain (non-alert) Dialog would
+    // close on this, but AlertDialog must not.
+    const overlay = document.querySelector(
+      '[data-slot="alert-dialog-overlay"]',
+    );
+    expect(overlay).not.toBeNull();
+    await user.click(overlay as Element);
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 });
