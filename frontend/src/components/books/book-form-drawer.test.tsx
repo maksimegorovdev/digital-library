@@ -19,6 +19,23 @@ describe('BookFormDrawer', () => {
     expect(screen.getByLabelText('Название')).toHaveValue('');
   });
 
+  it('opens as a right-side panel with a blur-free overlay', () => {
+    render(
+      <BookFormDrawer
+        open
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    const popup = document.querySelector('[data-slot="drawer-popup"]');
+    expect(popup).toHaveAttribute('data-swipe-direction', 'right');
+
+    const overlay = document.querySelector('[data-slot="drawer-overlay"]');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.className).not.toMatch(/backdrop-blur/);
+  });
+
   it('pre-fills fields and shows "Изменить книгу" when a book is passed', () => {
     render(
       <BookFormDrawer

@@ -115,6 +115,7 @@ export function BookFormDrawer({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
+      swipeDirection="right"
     >
       <DrawerContent>
         <DrawerHeader>
