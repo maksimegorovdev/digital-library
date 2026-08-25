@@ -1,55 +1,39 @@
-// Package store provides database access for the backend's domain data.
-package store
+// Package repository provides Postgres-backed access to the backend's
+// domain data. Repository implements domain.BookRepository; the mapping
+// between database rows and domain.Book lives entirely in this package,
+// keeping domain.Book free of persistence concerns.
+package repository
 
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/digital-library/backend/internal/domain"
 )
 
-// ErrBookNotFound indicates that no book exists with the given ID.
-var ErrBookNotFound = errors.New("book not found")
-
-// Book represents a single book in the home library.
-type Book struct {
-	ID       int64   `json:"id"`
-	Title    string  `json:"title"`
-	Author   string  `json:"author"`
-	Year     *int    `json:"year"`
-	Genre    *string `json:"genre"`
-	CoverURL *string `json:"coverUrl"`
-}
-
-// BookFilter narrows a book listing. A zero-value field means "no filter"
-// on that dimension.
-type BookFilter struct {
-	// Search matches case-insensitively against title OR author, by
-	// substring containment.
-	Search string
-	// Genre matches by exact equality against the stored genre value.
-	Genre string
-}
-
-// Store provides access to persisted domain data.
-type Store struct {
+// Repository provides access to persisted domain data.
+type Repository struct {
 	db *sql.DB
 }
 
-// New returns a Store backed by db.
-func New(db *sql.DB) *Store {
-	return &Store{db: db}
+// New returns a Repository backed by db.
+func New(db *sql.DB) *Repository {
+	return &Repository{db: db}
 }
+
+// Repository implements domain.BookRepository.
+var _ domain.BookRepository = (*Repository)(nil)
 
 // ListBooks returns a page of books matching filter, ordered by author,
 // then title, then id, along with the total number of matching books.
-func (s *Store) ListBooks(ctx context.Context, limit, offset int, filter BookFilter) ([]Book, int, error) {
+func (r *Repository) ListBooks(ctx context.Context, limit, offset int, filter domain.BookFilter) ([]domain.Book, int, error) {
 	where, args := bookFilterClause(filter)
 
 	var total int
 	countQuery := "SELECT count(*) FROM books" + where
-	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting books: %w", err)
 	}
 
@@ -60,15 +44,15 @@ func (s *Store) ListBooks(ctx context.Context, limit, offset int, filter BookFil
 		  LIMIT $%d OFFSET $%d`,
 		where, len(args)+1, len(args)+2,
 	)
-	rows, err := s.db.QueryContext(ctx, selectQuery, append(args, limit, offset)...)
+	rows, err := r.db.QueryContext(ctx, selectQuery, append(args, limit, offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying books: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
-	books := []Book{}
+	books := []domain.Book{}
 	for rows.Next() {
-		var b Book
+		var b domain.Book
 		if err := rows.Scan(&b.ID, &b.Title, &b.Author, &b.Year, &b.Genre, &b.CoverURL); err != nil {
 			return nil, 0, fmt.Errorf("scanning book: %w", err)
 		}
@@ -89,7 +73,7 @@ var likePatternEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 // filter) and its positional args for filter. The returned args are always
 // safe to pass alongside the clause: values never appear in the SQL text
 // itself, only as placeholders.
-func bookFilterClause(filter BookFilter) (string, []any) {
+func bookFilterClause(filter domain.BookFilter) (string, []any) {
 	var conditions []string
 	var args []any
 
@@ -109,46 +93,46 @@ func bookFilterClause(filter BookFilter) (string, []any) {
 }
 
 // CreateBook inserts b and returns it with its generated ID.
-func (s *Store) CreateBook(ctx context.Context, b Book) (Book, error) {
-	err := s.db.QueryRowContext(ctx,
+func (r *Repository) CreateBook(ctx context.Context, b domain.Book) (domain.Book, error) {
+	err := r.db.QueryRowContext(ctx,
 		`INSERT INTO books (title, author, year, genre, cover_url)
 		 VALUES ($1, $2, $3, $4, $5)
 		 RETURNING id`,
 		b.Title, b.Author, b.Year, b.Genre, b.CoverURL,
 	).Scan(&b.ID)
 	if err != nil {
-		return Book{}, fmt.Errorf("inserting book: %w", err)
+		return domain.Book{}, fmt.Errorf("inserting book: %w", err)
 	}
 	return b, nil
 }
 
 // UpdateBook replaces every column of the book identified by b.ID with the
-// values in b and returns the updated row. It returns ErrBookNotFound if no
-// book has that ID.
-func (s *Store) UpdateBook(ctx context.Context, b Book) (Book, error) {
-	res, err := s.db.ExecContext(ctx,
+// values in b and returns the updated row. It returns domain.ErrBookNotFound
+// if no book has that ID.
+func (r *Repository) UpdateBook(ctx context.Context, b domain.Book) (domain.Book, error) {
+	res, err := r.db.ExecContext(ctx,
 		`UPDATE books
 		    SET title = $1, author = $2, year = $3, genre = $4, cover_url = $5
 		  WHERE id = $6`,
 		b.Title, b.Author, b.Year, b.Genre, b.CoverURL, b.ID,
 	)
 	if err != nil {
-		return Book{}, fmt.Errorf("updating book: %w", err)
+		return domain.Book{}, fmt.Errorf("updating book: %w", err)
 	}
 	n, err := res.RowsAffected()
 	if err != nil {
-		return Book{}, fmt.Errorf("checking updated book: %w", err)
+		return domain.Book{}, fmt.Errorf("checking updated book: %w", err)
 	}
 	if n == 0 {
-		return Book{}, ErrBookNotFound
+		return domain.Book{}, domain.ErrBookNotFound
 	}
 	return b, nil
 }
 
-// DeleteBook removes the book identified by id. It returns ErrBookNotFound
-// if no book has that ID.
-func (s *Store) DeleteBook(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM books WHERE id = $1`, id)
+// DeleteBook removes the book identified by id. It returns
+// domain.ErrBookNotFound if no book has that ID.
+func (r *Repository) DeleteBook(ctx context.Context, id int64) error {
+	res, err := r.db.ExecContext(ctx, `DELETE FROM books WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("deleting book: %w", err)
 	}
@@ -157,7 +141,7 @@ func (s *Store) DeleteBook(ctx context.Context, id int64) error {
 		return fmt.Errorf("checking deleted book: %w", err)
 	}
 	if n == 0 {
-		return ErrBookNotFound
+		return domain.ErrBookNotFound
 	}
 	return nil
 }
