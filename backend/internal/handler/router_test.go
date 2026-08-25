@@ -1,13 +1,14 @@
-package httpapi_test
+package handler_test
 
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/digital-library/backend/internal/config"
-	"github.com/digital-library/backend/internal/httpapi"
+	"github.com/digital-library/backend/internal/handler"
 )
 
 func testConfig() config.Config {
@@ -17,7 +18,7 @@ func testConfig() config.Config {
 func TestRouterRecoversFromPanic(t *testing.T) {
 	t.Parallel()
 
-	r := httpapi.NewRouter(testConfig(), &fakeBookStore{})
+	r := handler.NewRouter(testConfig(), &mockBookUsecase{})
 	r.Get("/panic", func(http.ResponseWriter, *http.Request) {
 		panic("boom")
 	})
@@ -27,16 +28,14 @@ func TestRouterRecoversFromPanic(t *testing.T) {
 
 	r.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
-	}
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
 func TestRouterAllowsConfiguredOrigin(t *testing.T) {
 	t.Parallel()
 
 	cfg := testConfig()
-	r := httpapi.NewRouter(cfg, &fakeBookStore{})
+	r := handler.NewRouter(cfg, &mockBookUsecase{})
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	req.Header.Set("Origin", cfg.FrontendOrigin)
@@ -44,16 +43,14 @@ func TestRouterAllowsConfiguredOrigin(t *testing.T) {
 
 	r.ServeHTTP(rec, req)
 
-	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != cfg.FrontendOrigin {
-		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, cfg.FrontendOrigin)
-	}
+	require.Equal(t, cfg.FrontendOrigin, rec.Header().Get("Access-Control-Allow-Origin"))
 }
 
 func TestRouterAllowsBookMutationMethods(t *testing.T) {
 	t.Parallel()
 
 	cfg := testConfig()
-	r := httpapi.NewRouter(cfg, &fakeBookStore{})
+	r := handler.NewRouter(cfg, &mockBookUsecase{})
 
 	for _, method := range []string{http.MethodPost, http.MethodPatch, http.MethodDelete} {
 		req := httptest.NewRequest(http.MethodOptions, "/books", nil)
@@ -64,8 +61,6 @@ func TestRouterAllowsBookMutationMethods(t *testing.T) {
 		r.ServeHTTP(rec, req)
 
 		allowed := rec.Header().Get("Access-Control-Allow-Methods")
-		if !strings.Contains(allowed, method) {
-			t.Fatalf("preflight for %s: Access-Control-Allow-Methods = %q, want it to include %s", method, allowed, method)
-		}
+		require.Contains(t, allowed, method)
 	}
 }
