@@ -1,5 +1,4 @@
-// Package httpapi builds the backend's HTTP routing and handlers.
-package httpapi
+package handler
 
 import (
 	"encoding/json"
