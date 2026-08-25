@@ -18,7 +18,7 @@ func testConfig() config.Config {
 func TestRouterRecoversFromPanic(t *testing.T) {
 	t.Parallel()
 
-	r := handler.NewRouter(testConfig(), &fakeBookUsecase{})
+	r := handler.NewRouter(testConfig(), &mockBookUsecase{})
 	r.Get("/panic", func(http.ResponseWriter, *http.Request) {
 		panic("boom")
 	})
@@ -35,7 +35,7 @@ func TestRouterAllowsConfiguredOrigin(t *testing.T) {
 	t.Parallel()
 
 	cfg := testConfig()
-	r := handler.NewRouter(cfg, &fakeBookUsecase{})
+	r := handler.NewRouter(cfg, &mockBookUsecase{})
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	req.Header.Set("Origin", cfg.FrontendOrigin)
@@ -50,7 +50,7 @@ func TestRouterAllowsBookMutationMethods(t *testing.T) {
 	t.Parallel()
 
 	cfg := testConfig()
-	r := handler.NewRouter(cfg, &fakeBookUsecase{})
+	r := handler.NewRouter(cfg, &mockBookUsecase{})
 
 	for _, method := range []string{http.MethodPost, http.MethodPatch, http.MethodDelete} {
 		req := httptest.NewRequest(http.MethodOptions, "/books", nil)

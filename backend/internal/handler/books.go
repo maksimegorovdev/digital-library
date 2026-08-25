@@ -135,6 +135,46 @@ func parseBookID(r *http.Request) (int64, error) {
 	return strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 }
 
+// errorRule maps a sentinel error to the HTTP status and message written
+// when errors.Is matches it against a usecase call's returned error.
+type errorRule struct {
+	sentinel error
+	status   int
+	message  string
+}
+
+var (
+	titleRequiredRule  = errorRule{sentinel: usecase.ErrTitleRequired, status: http.StatusBadRequest, message: "title is required"}
+	authorRequiredRule = errorRule{sentinel: usecase.ErrAuthorRequired, status: http.StatusBadRequest, message: "author is required"}
+	bookNotFoundRule   = errorRule{sentinel: domain.ErrBookNotFound, status: http.StatusNotFound, message: "book not found"}
+
+	createBookErrorRules = []errorRule{titleRequiredRule, authorRequiredRule}
+	updateBookErrorRules = []errorRule{titleRequiredRule, authorRequiredRule, bookNotFoundRule}
+	deleteBookErrorRules = []errorRule{bookNotFoundRule}
+)
+
+// triageBookError checks err against rules in order, replacing the
+// repeated errors.Is/writeError chain that used to live in each of the
+// create/update/delete handlers. The first matching rule's status and
+// message are written via writeError. If err is non-nil but matches no
+// rule, it is logged under logMsg and a 500 is written with internalMsg.
+// Returns whether err was non-nil (i.e. whether a response was written),
+// so callers can early-return on true.
+func triageBookError(w http.ResponseWriter, err error, rules []errorRule, logMsg, internalMsg string) bool {
+	if err == nil {
+		return false
+	}
+	for _, rule := range rules {
+		if errors.Is(err, rule.sentinel) {
+			writeError(w, rule.status, rule.message)
+			return true
+		}
+	}
+	slog.Error(logMsg, "error", err)
+	writeError(w, http.StatusInternalServerError, internalMsg)
+	return true
+}
+
 // BooksHandler returns an http.HandlerFunc that lists books from lister,
 // paginated via the "limit" and "offset" query parameters.
 func BooksHandler(lister bookLister) http.HandlerFunc {
@@ -177,17 +217,7 @@ func CreateBookHandler(creator bookCreator) http.HandlerFunc {
 		}
 
 		created, err := creator.CreateBook(r.Context(), book)
-		if errors.Is(err, usecase.ErrTitleRequired) {
-			writeError(w, http.StatusBadRequest, "title is required")
-			return
-		}
-		if errors.Is(err, usecase.ErrAuthorRequired) {
-			writeError(w, http.StatusBadRequest, "author is required")
-			return
-		}
-		if err != nil {
-			slog.Error("creating book", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to create book")
+		if triageBookError(w, err, createBookErrorRules, "creating book", "failed to create book") {
 			return
 		}
 
@@ -217,21 +247,7 @@ func UpdateBookHandler(updater bookUpdater) http.HandlerFunc {
 		}
 
 		updated, err := updater.UpdateBook(r.Context(), id, book)
-		if errors.Is(err, usecase.ErrTitleRequired) {
-			writeError(w, http.StatusBadRequest, "title is required")
-			return
-		}
-		if errors.Is(err, usecase.ErrAuthorRequired) {
-			writeError(w, http.StatusBadRequest, "author is required")
-			return
-		}
-		if errors.Is(err, domain.ErrBookNotFound) {
-			writeError(w, http.StatusNotFound, "book not found")
-			return
-		}
-		if err != nil {
-			slog.Error("updating book", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to update book")
+		if triageBookError(w, err, updateBookErrorRules, "updating book", "failed to update book") {
 			return
 		}
 
@@ -253,13 +269,7 @@ func DeleteBookHandler(deleter bookDeleter) http.HandlerFunc {
 		}
 
 		err = deleter.DeleteBook(r.Context(), id)
-		if errors.Is(err, domain.ErrBookNotFound) {
-			writeError(w, http.StatusNotFound, "book not found")
-			return
-		}
-		if err != nil {
-			slog.Error("deleting book", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to delete book")
+		if triageBookError(w, err, deleteBookErrorRules, "deleting book", "failed to delete book") {
 			return
 		}
 

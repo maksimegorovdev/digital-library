@@ -13,7 +13,7 @@ import (
 )
 
 // ErrBookNotFound indicates that no book exists with the given ID.
-var ErrBookNotFound = errors.New("domain: book not found")
+var ErrBookNotFound = errors.New("book not found")
 
 // Book is a single book in the home library. It is a plain entity: no
 // json or SQL scanning tags. repository maps its own row-scan concerns

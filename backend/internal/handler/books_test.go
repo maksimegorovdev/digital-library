@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/digital-library/backend/internal/domain"
@@ -17,57 +18,34 @@ import (
 	"github.com/digital-library/backend/internal/usecase"
 )
 
-// fakeBookUsecase fakes every usecase method the books routes depend on.
-type fakeBookUsecase struct {
-	books []domain.Book
-	total int
-	err   error
-
-	gotLimit, gotOffset int
-	gotFilter           domain.BookFilter
-
-	createResult domain.Book
-	createErr    error
-	gotCreate    domain.Book
-
-	updateResult domain.Book
-	updateErr    error
-	gotUpdateID  int64
-	gotUpdate    domain.Book
-
-	deleteErr error
-	gotDelete int64
+// mockBookUsecase mocks the handler's bookLister/bookCreator/bookUpdater/
+// bookDeleter interfaces via testify/mock, consistent with
+// usecase/book_test.go's mockBookRepository.
+type mockBookUsecase struct {
+	mock.Mock
 }
 
-func (f *fakeBookUsecase) ListBooks(_ context.Context, limit, offset int, filter domain.BookFilter) ([]domain.Book, int, error) {
-	f.gotLimit, f.gotOffset = limit, offset
-	f.gotFilter = filter
-	if f.err != nil {
-		return nil, 0, f.err
-	}
-	return f.books, f.total, nil
+func (m *mockBookUsecase) ListBooks(ctx context.Context, limit, offset int, filter domain.BookFilter) ([]domain.Book, int, error) {
+	args := m.Called(ctx, limit, offset, filter)
+	books, _ := args.Get(0).([]domain.Book)
+	return books, args.Int(1), args.Error(2)
 }
 
-func (f *fakeBookUsecase) CreateBook(_ context.Context, b domain.Book) (domain.Book, error) {
-	f.gotCreate = b
-	if f.createErr != nil {
-		return domain.Book{}, f.createErr
-	}
-	return f.createResult, nil
+func (m *mockBookUsecase) CreateBook(ctx context.Context, b domain.Book) (domain.Book, error) {
+	args := m.Called(ctx, b)
+	book, _ := args.Get(0).(domain.Book)
+	return book, args.Error(1)
 }
 
-func (f *fakeBookUsecase) UpdateBook(_ context.Context, id int64, b domain.Book) (domain.Book, error) {
-	f.gotUpdateID = id
-	f.gotUpdate = b
-	if f.updateErr != nil {
-		return domain.Book{}, f.updateErr
-	}
-	return f.updateResult, nil
+func (m *mockBookUsecase) UpdateBook(ctx context.Context, id int64, b domain.Book) (domain.Book, error) {
+	args := m.Called(ctx, id, b)
+	book, _ := args.Get(0).(domain.Book)
+	return book, args.Error(1)
 }
 
-func (f *fakeBookUsecase) DeleteBook(_ context.Context, id int64) error {
-	f.gotDelete = id
-	return f.deleteErr
+func (m *mockBookUsecase) DeleteBook(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
 // requestWithID builds a request carrying a chi "id" URL parameter, as if
@@ -83,15 +61,14 @@ func TestBooksHandlerReturnsBooks(t *testing.T) {
 	t.Parallel()
 
 	year := 2020
-	fake := &fakeBookUsecase{
-		books: []domain.Book{{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year}},
-		total: 1,
-	}
+	mockUC := new(mockBookUsecase)
+	books := []domain.Book{{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year}}
+	mockUC.On("ListBooks", mock.Anything, 50, 0, domain.BookFilter{}).Return(books, 1, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/books", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -107,33 +84,33 @@ func TestBooksHandlerReturnsBooks(t *testing.T) {
 	require.Len(t, body.Books, 1)
 	require.Equal(t, "Dune", body.Books[0].Title)
 	require.Equal(t, 1, body.Total)
-	require.Equal(t, 50, fake.gotLimit)
-	require.Equal(t, 0, fake.gotOffset)
+	mockUC.AssertExpectations(t)
 }
 
 func TestBooksHandlerParsesLimitAndOffset(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{books: []domain.Book{}, total: 0}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("ListBooks", mock.Anything, 10, 20, domain.BookFilter{}).Return([]domain.Book{}, 0, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/books?limit=10&offset=20", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
-	require.Equal(t, 10, fake.gotLimit)
-	require.Equal(t, 20, fake.gotOffset)
+	mockUC.AssertExpectations(t)
 }
 
 func TestBooksHandlerReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{books: []domain.Book{}, total: 0}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("ListBooks", mock.Anything, 50, 0, domain.BookFilter{}).Return([]domain.Book{}, 0, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/books", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
 
@@ -147,51 +124,57 @@ func TestBooksHandlerReturnsEmptyList(t *testing.T) {
 func TestBooksHandlerParsesSearchAndGenre(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{books: []domain.Book{}, total: 0}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("ListBooks", mock.Anything, 50, 0, domain.BookFilter{Search: "dune", Genre: "Fantasy"}).
+		Return([]domain.Book{}, 0, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/books?search=dune&genre=Fantasy", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
-	require.Equal(t, domain.BookFilter{Search: "dune", Genre: "Fantasy"}, fake.gotFilter)
+	mockUC.AssertExpectations(t)
 }
 
 func TestBooksHandlerTreatsMissingSearchAndGenreAsNoFilter(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{books: []domain.Book{}, total: 0}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("ListBooks", mock.Anything, 50, 0, domain.BookFilter{}).Return([]domain.Book{}, 0, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/books", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
-	require.Equal(t, domain.BookFilter{}, fake.gotFilter)
+	mockUC.AssertExpectations(t)
 }
 
 func TestBooksHandlerTreatsEmptySearchAndGenreAsNoFilter(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{books: []domain.Book{}, total: 0}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("ListBooks", mock.Anything, 50, 0, domain.BookFilter{}).Return([]domain.Book{}, 0, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/books?search=&genre=", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
-	require.Equal(t, domain.BookFilter{}, fake.gotFilter)
+	mockUC.AssertExpectations(t)
 }
 
 func TestBooksHandlerReturns500OnUsecaseError(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{err: errors.New("connection refused")}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("ListBooks", mock.Anything, 50, 0, domain.BookFilter{}).
+		Return([]domain.Book(nil), 0, errors.New("connection refused"))
 
 	req := httptest.NewRequest(http.MethodGet, "/books", nil)
 	rec := httptest.NewRecorder()
 
-	handler.BooksHandler(fake).ServeHTTP(rec, req)
+	handler.BooksHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
@@ -200,53 +183,53 @@ func TestCreateBookHandlerCreatesBook(t *testing.T) {
 	t.Parallel()
 
 	year := 1965
-	fake := &fakeBookUsecase{
-		createResult: domain.Book{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year},
-	}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("CreateBook", mock.Anything, domain.Book{Title: "Dune", Author: "Frank Herbert", Year: &year}).
+		Return(domain.Book{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year}, nil)
 
 	body, err := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert", "year": 1965})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/books", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	handler.CreateBookHandler(fake).ServeHTTP(rec, req)
+	handler.CreateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusCreated, rec.Code)
-	require.Equal(t, "Dune", fake.gotCreate.Title)
-	require.Equal(t, "Frank Herbert", fake.gotCreate.Author)
 
 	var created struct {
 		ID int64 `json:"id"`
 	}
 	require.NoError(t, json.NewDecoder(rec.Body).Decode(&created))
 	require.Equal(t, int64(1), created.ID)
+	mockUC.AssertExpectations(t)
 }
 
 func TestCreateBookHandlerRejectsInvalidBody(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{}
+	mockUC := new(mockBookUsecase)
 
 	req := httptest.NewRequest(http.MethodPost, "/books", bytes.NewReader([]byte("not json")))
 	rec := httptest.NewRecorder()
 
-	handler.CreateBookHandler(fake).ServeHTTP(rec, req)
+	handler.CreateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	require.Equal(t, domain.Book{}, fake.gotCreate)
+	mockUC.AssertNotCalled(t, "CreateBook", mock.Anything, mock.Anything)
 }
 
 func TestCreateBookHandlerRejectsMissingTitle(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{createErr: usecase.ErrTitleRequired}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("CreateBook", mock.Anything, mock.Anything).Return(domain.Book{}, usecase.ErrTitleRequired)
 
 	body, err := json.Marshal(map[string]any{"title": "  ", "author": "Frank Herbert"})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/books", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	handler.CreateBookHandler(fake).ServeHTTP(rec, req)
+	handler.CreateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
@@ -254,14 +237,15 @@ func TestCreateBookHandlerRejectsMissingTitle(t *testing.T) {
 func TestCreateBookHandlerRejectsMissingAuthor(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{createErr: usecase.ErrAuthorRequired}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("CreateBook", mock.Anything, mock.Anything).Return(domain.Book{}, usecase.ErrAuthorRequired)
 
 	body, err := json.Marshal(map[string]any{"title": "Dune", "author": ""})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/books", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	handler.CreateBookHandler(fake).ServeHTTP(rec, req)
+	handler.CreateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
@@ -269,14 +253,15 @@ func TestCreateBookHandlerRejectsMissingAuthor(t *testing.T) {
 func TestCreateBookHandlerReturns500OnUsecaseError(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{createErr: errors.New("connection refused")}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("CreateBook", mock.Anything, mock.Anything).Return(domain.Book{}, errors.New("connection refused"))
 
 	body, err := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert"})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/books", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	handler.CreateBookHandler(fake).ServeHTTP(rec, req)
+	handler.CreateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
@@ -284,47 +269,49 @@ func TestCreateBookHandlerReturns500OnUsecaseError(t *testing.T) {
 func TestUpdateBookHandlerUpdatesBook(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{
-		updateResult: domain.Book{ID: 5, Title: "Dune", Author: "Frank Herbert"},
-	}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("UpdateBook", mock.Anything, int64(5), domain.Book{Title: "Dune", Author: "Frank Herbert"}).
+		Return(domain.Book{ID: 5, Title: "Dune", Author: "Frank Herbert"}, nil)
 
 	body, err := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert"})
 	require.NoError(t, err)
 	req := requestWithID(http.MethodPatch, "/books/5", "5", body)
 	rec := httptest.NewRecorder()
 
-	handler.UpdateBookHandler(fake).ServeHTTP(rec, req)
+	handler.UpdateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	require.Equal(t, int64(5), fake.gotUpdateID)
+	mockUC.AssertExpectations(t)
 }
 
 func TestUpdateBookHandlerRejectsInvalidID(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{}
+	mockUC := new(mockBookUsecase)
 
 	body, err := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert"})
 	require.NoError(t, err)
 	req := requestWithID(http.MethodPatch, "/books/abc", "abc", body)
 	rec := httptest.NewRecorder()
 
-	handler.UpdateBookHandler(fake).ServeHTTP(rec, req)
+	handler.UpdateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
+	mockUC.AssertNotCalled(t, "UpdateBook", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestUpdateBookHandlerRejectsMissingTitle(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{updateErr: usecase.ErrTitleRequired}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("UpdateBook", mock.Anything, int64(5), mock.Anything).Return(domain.Book{}, usecase.ErrTitleRequired)
 
 	body, err := json.Marshal(map[string]any{"title": "  ", "author": "Frank Herbert"})
 	require.NoError(t, err)
 	req := requestWithID(http.MethodPatch, "/books/5", "5", body)
 	rec := httptest.NewRecorder()
 
-	handler.UpdateBookHandler(fake).ServeHTTP(rec, req)
+	handler.UpdateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
@@ -332,14 +319,15 @@ func TestUpdateBookHandlerRejectsMissingTitle(t *testing.T) {
 func TestUpdateBookHandlerReturns404WhenNotFound(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{updateErr: domain.ErrBookNotFound}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("UpdateBook", mock.Anything, int64(999), mock.Anything).Return(domain.Book{}, domain.ErrBookNotFound)
 
 	body, err := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert"})
 	require.NoError(t, err)
 	req := requestWithID(http.MethodPatch, "/books/999", "999", body)
 	rec := httptest.NewRecorder()
 
-	handler.UpdateBookHandler(fake).ServeHTTP(rec, req)
+	handler.UpdateBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
@@ -347,26 +335,28 @@ func TestUpdateBookHandlerReturns404WhenNotFound(t *testing.T) {
 func TestDeleteBookHandlerDeletesBook(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("DeleteBook", mock.Anything, int64(5)).Return(nil)
 
 	req := requestWithID(http.MethodDelete, "/books/5", "5", nil)
 	rec := httptest.NewRecorder()
 
-	handler.DeleteBookHandler(fake).ServeHTTP(rec, req)
+	handler.DeleteBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusNoContent, rec.Code)
-	require.Equal(t, int64(5), fake.gotDelete)
+	mockUC.AssertExpectations(t)
 }
 
 func TestDeleteBookHandlerReturns404WhenNotFound(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookUsecase{deleteErr: domain.ErrBookNotFound}
+	mockUC := new(mockBookUsecase)
+	mockUC.On("DeleteBook", mock.Anything, int64(999)).Return(domain.ErrBookNotFound)
 
 	req := requestWithID(http.MethodDelete, "/books/999", "999", nil)
 	rec := httptest.NewRecorder()
 
-	handler.DeleteBookHandler(fake).ServeHTTP(rec, req)
+	handler.DeleteBookHandler(mockUC).ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
