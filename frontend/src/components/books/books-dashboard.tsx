@@ -1,13 +1,14 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { BookFormDrawer } from '@/components/books/book-form-drawer';
 import { createBooksColumns } from '@/components/books/columns';
 import { BooksDataTable } from '@/components/books/data-table';
 import { DeleteBookDialog } from '@/components/books/delete-book-dialog';
 import { BooksToolbar } from '@/components/books/toolbar';
+import { useAddBookRequestHandler } from '@/components/quick-create-provider';
 import { useFreshFetch } from '@/hooks/use-fresh-fetch';
 import { DEFAULT_BOOKS_PAGE_SIZE, fetchBooks, type Book } from '@/lib/api';
 
@@ -110,14 +111,20 @@ export function BooksDashboard() {
     onDelete: (book) => setDeletingBook(book),
   });
 
+  // Opens the form in "add" mode (no book being edited) — shared between
+  // the toolbar's "Добавить книгу" button below and the sidebar's "Quick
+  // Create" button, which reaches this page via the QuickCreateProvider
+  // signal (see quick-create-provider.tsx).
+  const openAddBookForm = useCallback(() => {
+    setEditingBook(undefined);
+    setFormOpen(true);
+  }, []);
+
+  useAddBookRequestHandler(openAddBookForm);
+
   return (
     <div className="flex flex-col gap-4">
-      <BooksToolbar
-        onAddBook={() => {
-          setEditingBook(undefined);
-          setFormOpen(true);
-        }}
-      />
+      <BooksToolbar onAddBook={openAddBookForm} />
       {loading ? (
         <p className="text-muted-foreground text-sm">Загрузка…</p>
       ) : error ? (

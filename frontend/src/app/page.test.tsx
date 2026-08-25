@@ -7,6 +7,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 import BooksPage from '@/app/page';
+import { QuickCreateProvider } from '@/components/quick-create-provider';
 import * as api from '@/lib/api';
 
 describe('BooksPage', () => {
@@ -18,7 +19,11 @@ describe('BooksPage', () => {
       pageSize: 10,
     });
 
-    render(<BooksPage />);
+    render(
+      <QuickCreateProvider>
+        <BooksPage />
+      </QuickCreateProvider>,
+    );
 
     expect(screen.getByText('Библиотека Егорова Петра')).toBeInTheDocument();
     expect(

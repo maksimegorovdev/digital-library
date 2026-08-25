@@ -73,4 +73,32 @@ test.describe('books list', () => {
     // above would miss.
     await expect(sidebar.getByRole('link')).toHaveCount(1);
   });
+
+  test('clicking "Quick Create" in the sidebar opens the same add-book form as "Добавить книгу"', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await page
+      .locator('[data-slot="sidebar"]')
+      .getByRole('button', { name: 'Quick Create' })
+      .click();
+
+    // Same drawer content the toolbar's own button opens: "add" mode
+    // (empty fields, no book being edited), not "edit" mode.
+    const drawer = page.getByRole('dialog');
+    await expect(drawer.getByText('Добавить книгу')).toBeVisible();
+    await expect(
+      drawer.getByText('Заполните данные новой книги.'),
+    ).toBeVisible();
+    await expect(page.getByLabel('Название')).toHaveValue('');
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).not.toBeVisible();
+
+    // The toolbar's own button reaches the identical drawer — confirming
+    // both entry points converge on one form, not two look-alikes.
+    await page.getByRole('button', { name: 'Добавить книгу' }).click();
+    await expect(drawer.getByText('Добавить книгу')).toBeVisible();
+  });
 });

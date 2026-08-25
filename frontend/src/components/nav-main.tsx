@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { useQuickCreate } from '@/components/quick-create-provider';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -57,6 +58,7 @@ export const navMainPlaceholderItems: NavMainPlaceholderItem[] = [
 
 export function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname();
+  const { requestAddBook } = useQuickCreate();
 
   return (
     <SidebarGroup>
@@ -64,12 +66,14 @@ export function NavMain({ items }: { items: NavMainItem[] }) {
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
             {/*
-              "Quick Create" is UI-only in this ticket — no onClick handler.
-              Wiring it to the real add-book flow is a separate ticket (#35).
+              Opens the same add-book form as the toolbar's "Добавить
+              книгу" button, via the shared QuickCreateProvider signal
+              (see quick-create-provider.tsx) — the form's own state lives
+              in the page-level BooksDashboard, not here.
             */}
             <SidebarMenuButton
-              disabled
               className="bg-primary text-primary-foreground min-w-8"
+              onClick={requestAddBook}
             >
               <CirclePlus />
               <span>Quick Create</span>

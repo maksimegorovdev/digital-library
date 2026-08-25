@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 let pathname = '/';
@@ -7,13 +8,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { NavMain, navMainItems } from '@/components/nav-main';
+import { QuickCreateProvider } from '@/components/quick-create-provider';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 function renderNavMain() {
   return render(
-    <SidebarProvider>
-      <NavMain items={navMainItems} />
-    </SidebarProvider>,
+    <QuickCreateProvider>
+      <SidebarProvider>
+        <NavMain items={navMainItems} />
+      </SidebarProvider>
+    </QuickCreateProvider>,
   );
 }
 
@@ -49,10 +53,16 @@ describe('NavMain', () => {
     expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 
-  it('renders "Quick Create" as a disabled, non-functional button', () => {
+  it('renders "Quick Create" as an enabled button that signals a request to open the add-book form', async () => {
+    const user = userEvent.setup();
     pathname = '/';
     renderNavMain();
 
-    expect(screen.getByRole('button', { name: /Quick Create/ })).toBeDisabled();
+    const button = screen.getByRole('button', { name: /Quick Create/ });
+    expect(button).toBeEnabled();
+
+    // No listener is registered in this render (that's books-dashboard's
+    // job) — clicking should be a no-op, not throw.
+    await user.click(button);
   });
 });
