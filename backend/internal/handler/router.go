@@ -1,4 +1,8 @@
-package httpapi
+// Package handler builds the backend's HTTP routing and handlers. It
+// depends only on usecase — routing, request decoding, status codes, and
+// CORS are the only concerns here; business logic lives in usecase. See
+// ADR 0004 for the full layering.
+package handler
 
 import (
 	"log/slog"
@@ -16,9 +20,9 @@ import (
 // preflight response before re-checking CORS rules.
 const maxCORSPreflightAgeSeconds = 300
 
-// bookStore is everything the books routes need from persistence.
-// repository.Repository satisfies this interface.
-type bookStore interface {
+// bookUsecase is everything the books routes need from the usecase layer.
+// usecase.Books satisfies this interface.
+type bookUsecase interface {
 	bookLister
 	bookCreator
 	bookUpdater
@@ -28,7 +32,7 @@ type bookStore interface {
 // NewRouter builds the backend's HTTP router: request ID propagation,
 // structured logging, panic recovery, CORS for the configured frontend
 // origin, and the service's routes.
-func NewRouter(cfg config.Config, books bookStore) *chi.Mux {
+func NewRouter(cfg config.Config, books bookUsecase) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)

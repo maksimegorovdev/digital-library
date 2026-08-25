@@ -12,8 +12,9 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/digital-library/backend/internal/config"
-	"github.com/digital-library/backend/internal/httpapi"
+	"github.com/digital-library/backend/internal/handler"
 	"github.com/digital-library/backend/internal/repository"
+	"github.com/digital-library/backend/internal/usecase"
 )
 
 const (
@@ -73,7 +74,8 @@ func run() error {
 		return err
 	}
 
-	r := httpapi.NewRouter(cfg, repository.New(db))
+	books := usecase.New(repository.New(db))
+	r := handler.NewRouter(cfg, books)
 
 	addr := ":" + cfg.Port
 	srv := &http.Server{

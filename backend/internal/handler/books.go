@@ -1,17 +1,18 @@
-package httpapi
+package handler
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/digital-library/backend/internal/domain"
+	"github.com/digital-library/backend/internal/usecase"
 )
 
 const (
@@ -19,38 +20,33 @@ const (
 	maxBooksLimit     = 200
 )
 
-// bookLister lists a page of books. repository.Repository satisfies this
-// interface.
+// bookLister lists a page of books. usecase.Books satisfies this interface.
 type bookLister interface {
 	ListBooks(ctx context.Context, limit, offset int, filter domain.BookFilter) ([]domain.Book, int, error)
 }
 
-// bookCreator creates a book. repository.Repository satisfies this
+// bookCreator validates and creates a book. usecase.Books satisfies this
 // interface.
 type bookCreator interface {
 	CreateBook(ctx context.Context, b domain.Book) (domain.Book, error)
 }
 
-// bookUpdater replaces a book. repository.Repository satisfies this
+// bookUpdater validates and replaces a book. usecase.Books satisfies this
 // interface.
 type bookUpdater interface {
-	UpdateBook(ctx context.Context, b domain.Book) (domain.Book, error)
+	UpdateBook(ctx context.Context, id int64, b domain.Book) (domain.Book, error)
 }
 
-// bookDeleter deletes a book. repository.Repository satisfies this
-// interface.
+// bookDeleter deletes a book. usecase.Books satisfies this interface.
 type bookDeleter interface {
 	DeleteBook(ctx context.Context, id int64) error
 }
 
-// bookOut is the JSON wire shape of a book in API responses. It exists
+// bookResponse is the JSON wire shape of a book in API responses. It exists
 // because domain.Book intentionally carries no json tags (see ADR 0004);
 // keeping the wire format here, rather than on domain.Book, means this
 // package can evolve its response shape independently of the entity.
-// A fuller request/response DTO layer lands in ticket #30 alongside the
-// handler rename — this is the minimal mapping needed to keep the API's
-// JSON output unchanged by this ticket's domain/repository split.
-type bookOut struct {
+type bookResponse struct {
 	ID       int64   `json:"id"`
 	Title    string  `json:"title"`
 	Author   string  `json:"author"`
@@ -59,9 +55,9 @@ type bookOut struct {
 	CoverURL *string `json:"coverUrl"`
 }
 
-// newBookOut converts a domain.Book to its wire representation.
-func newBookOut(b domain.Book) bookOut {
-	return bookOut{
+// newBookResponse converts a domain.Book to its wire representation.
+func newBookResponse(b domain.Book) bookResponse {
+	return bookResponse{
 		ID:       b.ID,
 		Title:    b.Title,
 		Author:   b.Author,
@@ -71,20 +67,21 @@ func newBookOut(b domain.Book) bookOut {
 	}
 }
 
-// newBooksOut converts a slice of domain.Book to its wire representation.
-func newBooksOut(books []domain.Book) []bookOut {
-	out := make([]bookOut, len(books))
+// newBookResponses converts a slice of domain.Book to its wire
+// representation.
+func newBookResponses(books []domain.Book) []bookResponse {
+	out := make([]bookResponse, len(books))
 	for i, b := range books {
-		out[i] = newBookOut(b)
+		out[i] = newBookResponse(b)
 	}
 	return out
 }
 
-type booksResponse struct {
-	Books  []bookOut `json:"books"`
-	Total  int       `json:"total"`
-	Limit  int       `json:"limit"`
-	Offset int       `json:"offset"`
+type booksListResponse struct {
+	Books  []bookResponse `json:"books"`
+	Total  int            `json:"total"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
 }
 
 type errorResponse struct {
@@ -101,8 +98,8 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	}
 }
 
-// bookInput is the JSON shape accepted by the create/update routes.
-type bookInput struct {
+// bookRequest is the JSON shape accepted by the create/update routes.
+type bookRequest struct {
 	Title    string  `json:"title"`
 	Author   string  `json:"author"`
 	Year     *int    `json:"year"`
@@ -110,32 +107,27 @@ type bookInput struct {
 	CoverURL *string `json:"coverUrl"`
 }
 
-// decodeBookInput reads and validates a bookInput from the request body.
-// The returned book has title and author trimmed and is otherwise a
-// verbatim copy of the input; ok is false if the body is malformed or
-// missing a required field, in which case msg is the error to report.
-func decodeBookInput(r *http.Request) (book domain.Book, msg string, ok bool) {
-	var in bookInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return domain.Book{}, "invalid request body", false
-	}
-
-	title := strings.TrimSpace(in.Title)
-	author := strings.TrimSpace(in.Author)
-	if title == "" {
-		return domain.Book{}, "title is required", false
-	}
-	if author == "" {
-		return domain.Book{}, "author is required", false
-	}
-
+// toDomain maps in to a domain.Book. Trimming and required-field validation
+// are usecase's responsibility (see ADR 0004); this mapping is purely
+// structural and passes Title/Author through untrimmed.
+func (in bookRequest) toDomain() domain.Book {
 	return domain.Book{
-		Title:    title,
-		Author:   author,
+		Title:    in.Title,
+		Author:   in.Author,
 		Year:     in.Year,
 		Genre:    in.Genre,
 		CoverURL: in.CoverURL,
-	}, "", true
+	}
+}
+
+// decodeBookRequest reads a bookRequest from the request body and maps it
+// to a domain.Book.
+func decodeBookRequest(r *http.Request) (domain.Book, error) {
+	var in bookRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		return domain.Book{}, fmt.Errorf("decoding request body: %w", err)
+	}
+	return in.toDomain(), nil
 }
 
 // parseBookID reads the "id" URL parameter set by chi's router.
@@ -162,8 +154,8 @@ func BooksHandler(lister bookLister) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(booksResponse{
-			Books:  newBooksOut(books),
+		if err := json.NewEncoder(w).Encode(booksListResponse{
+			Books:  newBookResponses(books),
 			Total:  total,
 			Limit:  limit,
 			Offset: offset,
@@ -178,13 +170,21 @@ func BooksHandler(lister bookLister) http.HandlerFunc {
 // author.
 func CreateBookHandler(creator bookCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		book, msg, ok := decodeBookInput(r)
-		if !ok {
-			writeError(w, http.StatusBadRequest, msg)
+		book, err := decodeBookRequest(r)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 
 		created, err := creator.CreateBook(r.Context(), book)
+		if errors.Is(err, usecase.ErrTitleRequired) {
+			writeError(w, http.StatusBadRequest, "title is required")
+			return
+		}
+		if errors.Is(err, usecase.ErrAuthorRequired) {
+			writeError(w, http.StatusBadRequest, "author is required")
+			return
+		}
 		if err != nil {
 			slog.Error("creating book", "error", err)
 			writeError(w, http.StatusInternalServerError, "failed to create book")
@@ -193,7 +193,7 @@ func CreateBookHandler(creator bookCreator) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(newBookOut(created)); err != nil {
+		if err := json.NewEncoder(w).Encode(newBookResponse(created)); err != nil {
 			slog.Error("encoding created book", "error", err)
 		}
 	}
@@ -210,14 +210,21 @@ func UpdateBookHandler(updater bookUpdater) http.HandlerFunc {
 			return
 		}
 
-		book, msg, ok := decodeBookInput(r)
-		if !ok {
-			writeError(w, http.StatusBadRequest, msg)
+		book, err := decodeBookRequest(r)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
-		book.ID = id
 
-		updated, err := updater.UpdateBook(r.Context(), book)
+		updated, err := updater.UpdateBook(r.Context(), id, book)
+		if errors.Is(err, usecase.ErrTitleRequired) {
+			writeError(w, http.StatusBadRequest, "title is required")
+			return
+		}
+		if errors.Is(err, usecase.ErrAuthorRequired) {
+			writeError(w, http.StatusBadRequest, "author is required")
+			return
+		}
 		if errors.Is(err, domain.ErrBookNotFound) {
 			writeError(w, http.StatusNotFound, "book not found")
 			return
@@ -229,7 +236,7 @@ func UpdateBookHandler(updater bookUpdater) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(newBookOut(updated)); err != nil {
+		if err := json.NewEncoder(w).Encode(newBookResponse(updated)); err != nil {
 			slog.Error("encoding updated book", "error", err)
 		}
 	}
