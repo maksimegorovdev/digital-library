@@ -8,7 +8,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { BooksDashboard } from '@/components/books/books-dashboard';
+import { QuickCreateProvider } from '@/components/quick-create-provider';
 import * as api from '@/lib/api';
+
+function renderDashboard() {
+  return render(
+    <QuickCreateProvider>
+      <BooksDashboard />
+    </QuickCreateProvider>,
+  );
+}
 
 function book(overrides: Partial<import('@/lib/api').Book> = {}) {
   return {
@@ -35,7 +44,7 @@ describe('BooksDashboard', () => {
       pageSize: 10,
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
 
     expect(screen.getByText('Загрузка…')).toBeInTheDocument();
     expect(await screen.findByText('Dune')).toBeInTheDocument();
@@ -49,7 +58,7 @@ describe('BooksDashboard', () => {
       pageSize: 10,
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
 
     expect(
       await screen.findByText('В библиотеке пока нет книг.'),
@@ -65,7 +74,7 @@ describe('BooksDashboard', () => {
     });
 
     searchParams = new URLSearchParams('search=nonexistent');
-    render(<BooksDashboard />);
+    renderDashboard();
 
     expect(
       await screen.findByText('По вашему запросу ничего не найдено.'),
@@ -83,7 +92,7 @@ describe('BooksDashboard', () => {
       pageSize: 5,
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
     await screen.findByText('Dune');
 
     // Requested pageSize is the default (10), which would put this at
@@ -98,7 +107,7 @@ describe('BooksDashboard', () => {
       error: 'network down',
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
 
     expect(
       await screen.findByText('Не удалось загрузить книги: network down'),
@@ -113,7 +122,7 @@ describe('BooksDashboard', () => {
       pageSize: 10,
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
     await screen.findByText('Dune');
 
     const { default: userEvent } = await import('@testing-library/user-event');
@@ -133,7 +142,7 @@ describe('BooksDashboard', () => {
       pageSize: 10,
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
     await screen.findByText('Dune');
 
     const { default: userEvent } = await import('@testing-library/user-event');
@@ -175,7 +184,7 @@ describe('BooksDashboard', () => {
       data: book({ id: 2, title: 'New Book' }),
     });
 
-    render(<BooksDashboard />);
+    renderDashboard();
     await screen.findByText('Dune');
     const callsBeforeSave = fetchSpy.mock.calls.length;
 
@@ -201,8 +210,12 @@ describe('BooksDashboard', () => {
     });
 
     searchParams = new URLSearchParams('genre=Fantasy');
-    const { rerender } = render(<BooksDashboard />);
-    rerender(<BooksDashboard />);
+    const { rerender } = renderDashboard();
+    rerender(
+      <QuickCreateProvider>
+        <BooksDashboard />
+      </QuickCreateProvider>,
+    );
 
     await waitFor(() =>
       expect(fetchSpy).toHaveBeenLastCalledWith({
@@ -221,14 +234,18 @@ describe('BooksDashboard', () => {
       pageSize: 10,
     });
 
-    const { rerender } = render(<BooksDashboard />);
+    const { rerender } = renderDashboard();
     await waitFor(() =>
       expect(fetchSpy).toHaveBeenLastCalledWith({ page: 1, pageSize: 10 }),
     );
     const callsBeforeSearch = fetchSpy.mock.calls.length;
 
     searchParams = new URLSearchParams('search=dune');
-    rerender(<BooksDashboard />);
+    rerender(
+      <QuickCreateProvider>
+        <BooksDashboard />
+      </QuickCreateProvider>,
+    );
 
     // Immediately after the URL changes, the debounce window hasn't
     // elapsed yet, so no new fetch has fired.
@@ -253,7 +270,7 @@ describe('BooksDashboard', () => {
       pageSize: 10,
     });
 
-    const { rerender } = render(<BooksDashboard />);
+    const { rerender } = renderDashboard();
     await screen.findByText('Dune');
 
     const { default: userEvent } = await import('@testing-library/user-event');
@@ -264,7 +281,11 @@ describe('BooksDashboard', () => {
     );
 
     searchParams = new URLSearchParams('genre=Fantasy');
-    rerender(<BooksDashboard />);
+    rerender(
+      <QuickCreateProvider>
+        <BooksDashboard />
+      </QuickCreateProvider>,
+    );
 
     await waitFor(() =>
       expect(fetchSpy).toHaveBeenLastCalledWith({
@@ -291,8 +312,12 @@ describe('BooksDashboard', () => {
     });
 
     searchParams = new URLSearchParams('search=dune&genre=Fantasy');
-    const { rerender } = render(<BooksDashboard />);
-    rerender(<BooksDashboard />);
+    const { rerender } = renderDashboard();
+    rerender(
+      <QuickCreateProvider>
+        <BooksDashboard />
+      </QuickCreateProvider>,
+    );
 
     await waitFor(() =>
       expect(fetchSpy).toHaveBeenLastCalledWith({

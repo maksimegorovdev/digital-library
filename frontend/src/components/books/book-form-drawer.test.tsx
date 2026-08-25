@@ -19,7 +19,7 @@ describe('BookFormDrawer', () => {
     expect(screen.getByLabelText('Название')).toHaveValue('');
   });
 
-  it('opens as a right-side panel with a blur-free overlay', () => {
+  it('opens as a right-side panel with the stock overlay', () => {
     render(
       <BookFormDrawer
         open
@@ -31,9 +31,12 @@ describe('BookFormDrawer', () => {
     const popup = document.querySelector('[data-slot="drawer-popup"]');
     expect(popup).toHaveAttribute('data-swipe-direction', 'right');
 
+    // commit b0a714d reset components/ui/drawer.tsx to clean base-nova
+    // stock output, which restores the
+    // supports-backdrop-filter:backdrop-blur-xs class this test used to
+    // assert was stripped out.
     const overlay = document.querySelector('[data-slot="drawer-overlay"]');
     expect(overlay).not.toBeNull();
-    expect(overlay?.className).not.toMatch(/backdrop-blur/);
   });
 
   it('pre-fills fields and shows "Изменить книгу" when a book is passed', () => {
