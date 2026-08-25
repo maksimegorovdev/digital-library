@@ -65,4 +65,21 @@ describe('NavMain', () => {
     // job) — clicking should be a no-op, not throw.
     await user.click(button);
   });
+
+  it('renders the decorative icon next to "Quick Create" as inert', async () => {
+    const user = userEvent.setup();
+    pathname = '/';
+    const { container } = renderNavMain();
+
+    const decorative = container.querySelector('span[aria-hidden="true"]');
+    expect(decorative).not.toBeNull();
+    // A plain `<span>`, not a `<button>`/`<a>` — no click target, no
+    // tabIndex making it keyboard-focusable, no role for it to fake.
+    expect(decorative?.tagName).toBe('SPAN');
+    expect(decorative).not.toHaveAttribute('tabindex');
+    expect(decorative).not.toHaveAttribute('role');
+
+    // Clicking it is a no-op, not a hidden trigger for something else.
+    await user.click(decorative as Element);
+  });
 });

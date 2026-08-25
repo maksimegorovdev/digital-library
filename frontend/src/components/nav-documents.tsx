@@ -1,18 +1,15 @@
-import type { LucideIcon } from 'lucide-react';
-
+import {
+  DisabledNavMenuItem,
+  type DisabledNavItem,
+} from '@/components/nav-disabled-item';
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-export type NavDocumentsItem = {
-  title: string;
-  icon: LucideIcon;
-};
+export type NavDocumentsItem = DisabledNavItem;
 
 // dashboard-01's "Documents" section (Data Library/Reports/Word Assistant),
 // translated to Russian. Deliberately non-functional — same disabled-
@@ -30,15 +27,10 @@ export function NavDocuments({ items }: { items: NavDocumentsItem[] }) {
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                disabled
-                className="text-sidebar-foreground/60"
-              >
-                <item.icon />
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <DisabledNavMenuItem
+              key={item.title}
+              item={item}
+            />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>

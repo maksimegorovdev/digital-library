@@ -1,18 +1,16 @@
 import type { ComponentProps } from 'react';
-import type { LucideIcon } from 'lucide-react';
 
+import {
+  DisabledNavMenuItem,
+  type DisabledNavItem,
+} from '@/components/nav-disabled-item';
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-export type NavSecondaryItem = {
-  title: string;
-  icon: LucideIcon;
-};
+export type NavSecondaryItem = DisabledNavItem;
 
 // Deliberately non-functional: no href, no onClick, rendered `disabled` —
 // these exist only to match dashboard-01's visual density (see
@@ -27,16 +25,11 @@ export function NavSecondary({
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                size="sm"
-                disabled
-                className="text-sidebar-foreground/60"
-              >
-                <item.icon />
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <DisabledNavMenuItem
+              key={item.title}
+              item={item}
+              size="sm"
+            />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>

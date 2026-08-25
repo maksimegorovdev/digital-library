@@ -37,21 +37,23 @@ type QuickCreateContextValue = {
 const QuickCreateContext = createContext<QuickCreateContextValue | null>(null);
 
 export function QuickCreateProvider({ children }: { children: ReactNode }) {
-  // A set rather than a single slot so the provider doesn't assume only
-  // one page will ever listen — harmless in this single-route app today,
-  // but avoids a silent "last subscriber wins" foot-gun if that changes.
-  const handlersRef = useRef(new Set<() => void>());
+  // Single slot: this app is single-route, so exactly one handler (from
+  // books-dashboard.tsx) is ever registered at a time. If a second
+  // registration happens while one is already active, the newer one wins —
+  // consistent with the unregister-on-unmount pattern below, where the
+  // previous page's cleanup would otherwise clobber the new page's handler.
+  const handlerRef = useRef<(() => void) | null>(null);
 
   const requestAddBook = useCallback(() => {
-    for (const handler of handlersRef.current) {
-      handler();
-    }
+    handlerRef.current?.();
   }, []);
 
   const registerAddBookHandler = useCallback((handler: () => void) => {
-    handlersRef.current.add(handler);
+    handlerRef.current = handler;
     return () => {
-      handlersRef.current.delete(handler);
+      if (handlerRef.current === handler) {
+        handlerRef.current = null;
+      }
     };
   }, []);
 

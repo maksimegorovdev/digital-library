@@ -13,6 +13,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import {
+  DisabledNavMenuItem,
+  type DisabledNavItem,
+} from '@/components/nav-disabled-item';
 import { useQuickCreate } from '@/components/quick-create-provider';
 import {
   SidebarGroup,
@@ -37,10 +41,7 @@ export const navMainItems: NavMainItem[] = [
   { title: 'Библиотека книг', url: '/', icon: Library },
 ];
 
-type NavMainPlaceholderItem = {
-  title: string;
-  icon: LucideIcon;
-};
+type NavMainPlaceholderItem = DisabledNavItem;
 
 // dashboard-01's extra main-nav entries (Lifecycle/Analytics/Projects/Team),
 // translated to Russian and kept as deliberately non-functional placeholders
@@ -106,25 +107,10 @@ export function NavMain({ items }: { items: NavMainItem[] }) {
             </SidebarMenuItem>
           ))}
           {navMainPlaceholderItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              {/*
-                No `tooltip` prop here (unlike the real items above):
-                SidebarMenuButton wraps a tooltip'd trigger in Base UI's
-                TooltipTrigger, which intercepts `disabled` and reports it
-                as `data-trigger-disabled` instead of a real `disabled`
-                attribute (so hover/focus still reaches the trigger for the
-                tooltip) — the button would stay natively clickable. Same
-                reasoning as NavSecondary/NavUser, which also skip
-                `tooltip` on every disabled placeholder.
-              */}
-              <SidebarMenuButton
-                disabled
-                className="text-sidebar-foreground/60"
-              >
-                <item.icon />
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <DisabledNavMenuItem
+              key={item.title}
+              item={item}
+            />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>

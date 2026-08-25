@@ -31,9 +31,10 @@ describe('BookFormDrawer', () => {
     const popup = document.querySelector('[data-slot="drawer-popup"]');
     expect(popup).toHaveAttribute('data-swipe-direction', 'right');
 
-    // Ticket #33 reset components/ui/drawer.tsx to clean base-nova stock
-    // output, which restores the supports-backdrop-filter:backdrop-blur-xs
-    // class this test used to assert was stripped out.
+    // commit b0a714d reset components/ui/drawer.tsx to clean base-nova
+    // stock output, which restores the
+    // supports-backdrop-filter:backdrop-blur-xs class this test used to
+    // assert was stripped out.
     const overlay = document.querySelector('[data-slot="drawer-overlay"]');
     expect(overlay).not.toBeNull();
   });
