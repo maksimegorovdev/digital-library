@@ -11,32 +11,32 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/digital-library/backend/internal/domain"
 	"github.com/digital-library/backend/internal/httpapi"
-	"github.com/digital-library/backend/internal/store"
 )
 
 // fakeBookStore fakes every persistence method the books routes depend on.
 type fakeBookStore struct {
-	books []store.Book
+	books []domain.Book
 	total int
 	err   error
 
 	gotLimit, gotOffset int
-	gotFilter           store.BookFilter
+	gotFilter           domain.BookFilter
 
-	createResult store.Book
+	createResult domain.Book
 	createErr    error
-	gotCreate    store.Book
+	gotCreate    domain.Book
 
-	updateResult store.Book
+	updateResult domain.Book
 	updateErr    error
-	gotUpdate    store.Book
+	gotUpdate    domain.Book
 
 	deleteErr error
 	gotDelete int64
 }
 
-func (f *fakeBookStore) ListBooks(_ context.Context, limit, offset int, filter store.BookFilter) ([]store.Book, int, error) {
+func (f *fakeBookStore) ListBooks(_ context.Context, limit, offset int, filter domain.BookFilter) ([]domain.Book, int, error) {
 	f.gotLimit, f.gotOffset = limit, offset
 	f.gotFilter = filter
 	if f.err != nil {
@@ -45,18 +45,18 @@ func (f *fakeBookStore) ListBooks(_ context.Context, limit, offset int, filter s
 	return f.books, f.total, nil
 }
 
-func (f *fakeBookStore) CreateBook(_ context.Context, b store.Book) (store.Book, error) {
+func (f *fakeBookStore) CreateBook(_ context.Context, b domain.Book) (domain.Book, error) {
 	f.gotCreate = b
 	if f.createErr != nil {
-		return store.Book{}, f.createErr
+		return domain.Book{}, f.createErr
 	}
 	return f.createResult, nil
 }
 
-func (f *fakeBookStore) UpdateBook(_ context.Context, b store.Book) (store.Book, error) {
+func (f *fakeBookStore) UpdateBook(_ context.Context, b domain.Book) (domain.Book, error) {
 	f.gotUpdate = b
 	if f.updateErr != nil {
-		return store.Book{}, f.updateErr
+		return domain.Book{}, f.updateErr
 	}
 	return f.updateResult, nil
 }
@@ -80,7 +80,7 @@ func TestBooksHandlerReturnsBooks(t *testing.T) {
 
 	year := 2020
 	fake := &fakeBookStore{
-		books: []store.Book{{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year}},
+		books: []domain.Book{{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year}},
 		total: 1,
 	}
 
@@ -94,10 +94,10 @@ func TestBooksHandlerReturnsBooks(t *testing.T) {
 	}
 
 	var body struct {
-		Books  []store.Book `json:"books"`
-		Total  int          `json:"total"`
-		Limit  int          `json:"limit"`
-		Offset int          `json:"offset"`
+		Books  []domain.Book `json:"books"`
+		Total  int           `json:"total"`
+		Limit  int           `json:"limit"`
+		Offset int           `json:"offset"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("decoding response body: %v", err)
@@ -116,7 +116,7 @@ func TestBooksHandlerReturnsBooks(t *testing.T) {
 func TestBooksHandlerParsesLimitAndOffset(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{books: []store.Book{}, total: 0}
+	fake := &fakeBookStore{books: []domain.Book{}, total: 0}
 
 	req := httptest.NewRequest(http.MethodGet, "/books?limit=10&offset=20", nil)
 	rec := httptest.NewRecorder()
@@ -131,7 +131,7 @@ func TestBooksHandlerParsesLimitAndOffset(t *testing.T) {
 func TestBooksHandlerReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{books: []store.Book{}, total: 0}
+	fake := &fakeBookStore{books: []domain.Book{}, total: 0}
 
 	req := httptest.NewRequest(http.MethodGet, "/books", nil)
 	rec := httptest.NewRecorder()
@@ -143,7 +143,7 @@ func TestBooksHandlerReturnsEmptyList(t *testing.T) {
 	}
 
 	var body struct {
-		Books []store.Book `json:"books"`
+		Books []domain.Book `json:"books"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("decoding response body: %v", err)
@@ -156,14 +156,14 @@ func TestBooksHandlerReturnsEmptyList(t *testing.T) {
 func TestBooksHandlerParsesSearchAndGenre(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{books: []store.Book{}, total: 0}
+	fake := &fakeBookStore{books: []domain.Book{}, total: 0}
 
 	req := httptest.NewRequest(http.MethodGet, "/books?search=dune&genre=Fantasy", nil)
 	rec := httptest.NewRecorder()
 
 	httpapi.BooksHandler(fake).ServeHTTP(rec, req)
 
-	want := store.BookFilter{Search: "dune", Genre: "Fantasy"}
+	want := domain.BookFilter{Search: "dune", Genre: "Fantasy"}
 	if fake.gotFilter != want {
 		t.Fatalf("ListBooks called with filter=%+v, want %+v", fake.gotFilter, want)
 	}
@@ -172,14 +172,14 @@ func TestBooksHandlerParsesSearchAndGenre(t *testing.T) {
 func TestBooksHandlerTreatsMissingSearchAndGenreAsNoFilter(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{books: []store.Book{}, total: 0}
+	fake := &fakeBookStore{books: []domain.Book{}, total: 0}
 
 	req := httptest.NewRequest(http.MethodGet, "/books", nil)
 	rec := httptest.NewRecorder()
 
 	httpapi.BooksHandler(fake).ServeHTTP(rec, req)
 
-	want := store.BookFilter{}
+	want := domain.BookFilter{}
 	if fake.gotFilter != want {
 		t.Fatalf("ListBooks called with filter=%+v, want %+v", fake.gotFilter, want)
 	}
@@ -188,14 +188,14 @@ func TestBooksHandlerTreatsMissingSearchAndGenreAsNoFilter(t *testing.T) {
 func TestBooksHandlerTreatsEmptySearchAndGenreAsNoFilter(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{books: []store.Book{}, total: 0}
+	fake := &fakeBookStore{books: []domain.Book{}, total: 0}
 
 	req := httptest.NewRequest(http.MethodGet, "/books?search=&genre=", nil)
 	rec := httptest.NewRecorder()
 
 	httpapi.BooksHandler(fake).ServeHTTP(rec, req)
 
-	want := store.BookFilter{}
+	want := domain.BookFilter{}
 	if fake.gotFilter != want {
 		t.Fatalf("ListBooks called with filter=%+v, want %+v", fake.gotFilter, want)
 	}
@@ -221,7 +221,7 @@ func TestCreateBookHandlerCreatesBook(t *testing.T) {
 
 	year := 1965
 	fake := &fakeBookStore{
-		createResult: store.Book{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year},
+		createResult: domain.Book{ID: 1, Title: "Dune", Author: "Frank Herbert", Year: &year},
 	}
 
 	body, _ := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert", "year": 1965})
@@ -237,7 +237,7 @@ func TestCreateBookHandlerCreatesBook(t *testing.T) {
 		t.Fatalf("CreateBook called with %+v, want title/author set", fake.gotCreate)
 	}
 
-	var created store.Book
+	var created domain.Book
 	if err := json.NewDecoder(rec.Body).Decode(&created); err != nil {
 		t.Fatalf("decoding response body: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestCreateBookHandlerRejectsMissingTitle(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
-	if fake.gotCreate != (store.Book{}) {
+	if fake.gotCreate != (domain.Book{}) {
 		t.Fatalf("CreateBook should not have been called, got %+v", fake.gotCreate)
 	}
 }
@@ -301,7 +301,7 @@ func TestUpdateBookHandlerUpdatesBook(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeBookStore{
-		updateResult: store.Book{ID: 5, Title: "Dune", Author: "Frank Herbert"},
+		updateResult: domain.Book{ID: 5, Title: "Dune", Author: "Frank Herbert"},
 	}
 
 	body, _ := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert"})
@@ -337,7 +337,7 @@ func TestUpdateBookHandlerRejectsInvalidID(t *testing.T) {
 func TestUpdateBookHandlerReturns404WhenNotFound(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{updateErr: store.ErrBookNotFound}
+	fake := &fakeBookStore{updateErr: domain.ErrBookNotFound}
 
 	body, _ := json.Marshal(map[string]any{"title": "Dune", "author": "Frank Herbert"})
 	req := requestWithID(http.MethodPatch, "/books/999", "999", body)
@@ -371,7 +371,7 @@ func TestDeleteBookHandlerDeletesBook(t *testing.T) {
 func TestDeleteBookHandlerReturns404WhenNotFound(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeBookStore{deleteErr: store.ErrBookNotFound}
+	fake := &fakeBookStore{deleteErr: domain.ErrBookNotFound}
 
 	req := requestWithID(http.MethodDelete, "/books/999", "999", nil)
 	rec := httptest.NewRecorder()

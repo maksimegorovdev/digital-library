@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/digital-library/backend/internal/store"
+	"github.com/digital-library/backend/internal/domain"
 )
 
 const (
@@ -19,31 +19,72 @@ const (
 	maxBooksLimit     = 200
 )
 
-// bookLister lists a page of books. store.Store satisfies this interface.
+// bookLister lists a page of books. repository.Repository satisfies this
+// interface.
 type bookLister interface {
-	ListBooks(ctx context.Context, limit, offset int, filter store.BookFilter) ([]store.Book, int, error)
+	ListBooks(ctx context.Context, limit, offset int, filter domain.BookFilter) ([]domain.Book, int, error)
 }
 
-// bookCreator creates a book. store.Store satisfies this interface.
+// bookCreator creates a book. repository.Repository satisfies this
+// interface.
 type bookCreator interface {
-	CreateBook(ctx context.Context, b store.Book) (store.Book, error)
+	CreateBook(ctx context.Context, b domain.Book) (domain.Book, error)
 }
 
-// bookUpdater replaces a book. store.Store satisfies this interface.
+// bookUpdater replaces a book. repository.Repository satisfies this
+// interface.
 type bookUpdater interface {
-	UpdateBook(ctx context.Context, b store.Book) (store.Book, error)
+	UpdateBook(ctx context.Context, b domain.Book) (domain.Book, error)
 }
 
-// bookDeleter deletes a book. store.Store satisfies this interface.
+// bookDeleter deletes a book. repository.Repository satisfies this
+// interface.
 type bookDeleter interface {
 	DeleteBook(ctx context.Context, id int64) error
 }
 
+// bookOut is the JSON wire shape of a book in API responses. It exists
+// because domain.Book intentionally carries no json tags (see ADR 0004);
+// keeping the wire format here, rather than on domain.Book, means this
+// package can evolve its response shape independently of the entity.
+// A fuller request/response DTO layer lands in ticket #30 alongside the
+// handler rename — this is the minimal mapping needed to keep the API's
+// JSON output unchanged by this ticket's domain/repository split.
+type bookOut struct {
+	ID       int64   `json:"id"`
+	Title    string  `json:"title"`
+	Author   string  `json:"author"`
+	Year     *int    `json:"year"`
+	Genre    *string `json:"genre"`
+	CoverURL *string `json:"coverUrl"`
+}
+
+// newBookOut converts a domain.Book to its wire representation.
+func newBookOut(b domain.Book) bookOut {
+	return bookOut{
+		ID:       b.ID,
+		Title:    b.Title,
+		Author:   b.Author,
+		Year:     b.Year,
+		Genre:    b.Genre,
+		CoverURL: b.CoverURL,
+	}
+}
+
+// newBooksOut converts a slice of domain.Book to its wire representation.
+func newBooksOut(books []domain.Book) []bookOut {
+	out := make([]bookOut, len(books))
+	for i, b := range books {
+		out[i] = newBookOut(b)
+	}
+	return out
+}
+
 type booksResponse struct {
-	Books  []store.Book `json:"books"`
-	Total  int          `json:"total"`
-	Limit  int          `json:"limit"`
-	Offset int          `json:"offset"`
+	Books  []bookOut `json:"books"`
+	Total  int       `json:"total"`
+	Limit  int       `json:"limit"`
+	Offset int       `json:"offset"`
 }
 
 type errorResponse struct {
@@ -73,22 +114,22 @@ type bookInput struct {
 // The returned book has title and author trimmed and is otherwise a
 // verbatim copy of the input; ok is false if the body is malformed or
 // missing a required field, in which case msg is the error to report.
-func decodeBookInput(r *http.Request) (book store.Book, msg string, ok bool) {
+func decodeBookInput(r *http.Request) (book domain.Book, msg string, ok bool) {
 	var in bookInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return store.Book{}, "invalid request body", false
+		return domain.Book{}, "invalid request body", false
 	}
 
 	title := strings.TrimSpace(in.Title)
 	author := strings.TrimSpace(in.Author)
 	if title == "" {
-		return store.Book{}, "title is required", false
+		return domain.Book{}, "title is required", false
 	}
 	if author == "" {
-		return store.Book{}, "author is required", false
+		return domain.Book{}, "author is required", false
 	}
 
-	return store.Book{
+	return domain.Book{
 		Title:    title,
 		Author:   author,
 		Year:     in.Year,
@@ -108,7 +149,7 @@ func BooksHandler(lister bookLister) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit := parseLimit(r.URL.Query().Get("limit"))
 		offset := parseOffset(r.URL.Query().Get("offset"))
-		filter := store.BookFilter{
+		filter := domain.BookFilter{
 			Search: r.URL.Query().Get("search"),
 			Genre:  r.URL.Query().Get("genre"),
 		}
@@ -122,7 +163,7 @@ func BooksHandler(lister bookLister) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(booksResponse{
-			Books:  books,
+			Books:  newBooksOut(books),
 			Total:  total,
 			Limit:  limit,
 			Offset: offset,
@@ -152,7 +193,7 @@ func CreateBookHandler(creator bookCreator) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(created); err != nil {
+		if err := json.NewEncoder(w).Encode(newBookOut(created)); err != nil {
 			slog.Error("encoding created book", "error", err)
 		}
 	}
@@ -177,7 +218,7 @@ func UpdateBookHandler(updater bookUpdater) http.HandlerFunc {
 		book.ID = id
 
 		updated, err := updater.UpdateBook(r.Context(), book)
-		if errors.Is(err, store.ErrBookNotFound) {
+		if errors.Is(err, domain.ErrBookNotFound) {
 			writeError(w, http.StatusNotFound, "book not found")
 			return
 		}
@@ -188,7 +229,7 @@ func UpdateBookHandler(updater bookUpdater) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(updated); err != nil {
+		if err := json.NewEncoder(w).Encode(newBookOut(updated)); err != nil {
 			slog.Error("encoding updated book", "error", err)
 		}
 	}
@@ -205,7 +246,7 @@ func DeleteBookHandler(deleter bookDeleter) http.HandlerFunc {
 		}
 
 		err = deleter.DeleteBook(r.Context(), id)
-		if errors.Is(err, store.ErrBookNotFound) {
+		if errors.Is(err, domain.ErrBookNotFound) {
 			writeError(w, http.StatusNotFound, "book not found")
 			return
 		}

@@ -17,7 +17,7 @@ import (
 const maxCORSPreflightAgeSeconds = 300
 
 // bookStore is everything the books routes need from persistence.
-// store.Store satisfies this interface.
+// repository.Repository satisfies this interface.
 type bookStore interface {
 	bookLister
 	bookCreator

@@ -13,7 +13,7 @@ import (
 
 	"github.com/digital-library/backend/internal/config"
 	"github.com/digital-library/backend/internal/httpapi"
-	"github.com/digital-library/backend/internal/store"
+	"github.com/digital-library/backend/internal/repository"
 )
 
 const (
@@ -73,7 +73,7 @@ func run() error {
 		return err
 	}
 
-	r := httpapi.NewRouter(cfg, store.New(db))
+	r := httpapi.NewRouter(cfg, repository.New(db))
 
 	addr := ":" + cfg.Port
 	srv := &http.Server{
